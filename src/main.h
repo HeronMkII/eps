@@ -19,13 +19,6 @@
 #include <uart/uart.h>
 #include <uart/log.h>
 
-// PAY libraries
-#include "adc.h"
-#include "analog_temp.h"
-#include "freq_measure.h"
-#include "pex.h"
-#include "sensors.h"
-
 
 
 
@@ -69,7 +62,7 @@ mob_t cmd_tx_mob = {
 };
 
 mob_t cmd_rx_mob = {
-	.mob_num = 3,
+	.mob_num = 4,
 	.mob_type = RX_MOB,
     .dlc = 8,
     .id_tag = PAY_CMD_RX_MOB_ID,
@@ -88,3 +81,11 @@ mob_t data_tx_mob = {
 
     .tx_data_cb = data_tx_callback
 };
+
+
+
+
+
+void print_bytes(uint8_t *data, uint8_t len);
+void handle_rx(void);
+void init_eps(void);
