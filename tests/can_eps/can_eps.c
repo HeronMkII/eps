@@ -11,7 +11,7 @@
 #include <assert/assert.h>
 
 // Counter for which request to send (0-3)
-uint8_t req_num = 0;            // current
+uint8_t req_num = 3;            // current
 const uint8_t NUM_REQ_NUMS = 4; // total number (count)
 
 void tx_callback(uint8_t*, uint8_t*);
@@ -67,6 +67,8 @@ void tx_callback(uint8_t* data, uint8_t* len) {
         data[i] = 0;
     }
 
+    req_num = (req_num + 1) % NUM_REQ_NUMS;
+
     switch (req_num) {
         case 0:
             data[0] = 1;
@@ -93,8 +95,6 @@ void tx_callback(uint8_t* data, uint8_t* len) {
             break;
     }
 
-    req_num = (req_num + 1) % NUM_REQ_NUMS;
-
     print("Transmitting Message:\n");
     print_bytes(data, *len);
 }
@@ -104,7 +104,7 @@ void rx_callback(const uint8_t* data, uint8_t len) {
     print("RX Callback\n");
     print("Received Message:\n");
     print_bytes((uint8_t *) data, len);
-    print((char *) data);
+    print("%s\n", (char *) data);
 
     switch (req_num) {
         case 0:
@@ -135,6 +135,8 @@ int main(void) {
     init_uart();
     print("\n\nUART Initialized\n");
 
+    assert_print_on_pass = true;
+
     init_can();
     init_tx_mob(&tx_mob);
     init_rx_mob(&rx_mob);
@@ -143,7 +145,7 @@ int main(void) {
     while(1) {
         resume_mob(&tx_mob);
         while (!is_paused(&tx_mob)) {};
-        _delay_ms(2000);
+        _delay_ms(5000);
 
         assert_print_results();
     }
