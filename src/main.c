@@ -46,42 +46,29 @@ void handle_rx(void) {
     uint8_t tx_data[8];
 
     // Send back the message type and field number
-    // tx_data[0] = rx_data[0];
-    // tx_data[1] = rx_data[1];
-    //
-    // // Fill the rest with zeros just in case
-    // for (uint8_t i = 2; i < 8; i++) {
-    //     tx_data[i] = 0;
-    // }
+    tx_data[0] = rx_data[0];
+    tx_data[1] = rx_data[1];
+    tx_data[2] = rx_data[2];
+
+    // Fill the rest with zeros just in case
+    for (uint8_t i = 3; i < 8; i++) {
+        tx_data[i] = 0;
+    }
 
     // Check message type
-    switch (rx_data[0]) {
-        case 1:
 
-            switch (rx_data[1]){
-                case 1:
-                    copy_string(tx_data, "hello11", 8);
+    switch (rx_data[1]) {
+        case CAN_EPS_HK:
+            switch (rx_data[2]){
+                case CAN_EPS_HK_VOLTAGE:
+                    tx_data[3] = adc_read_channel_raw_data(rx_data[2]);
+                    // copy_string(tx_data, "hello11", 8);
                     break;
-                case 2:
-                    copy_string(tx_data, "hello12", 8);
+                case CAN_EPS_HK_CURRENT:
+                    // copy_string(tx_data, "hello12", 8);
+                    tx_data[3] = adc_read_channel_raw_data(rx_data[2]);
                     break;
             }
-            //print("PAY_HK_REQ\n");
-            //handle_rx_hk(tx_data);
-            break;
-
-        case 2:
-
-            switch (rx_data[1]){
-                case 1:
-                    copy_string(tx_data, "hello21", 8);
-                    break;
-                case 2:
-                    copy_string(tx_data, "hello22", 8);
-                    break;
-            }
-            //print("PAY_SCI_REQ\n");
-            //handle_rx_sci(tx_data);
             break;
 
         default:
@@ -184,8 +171,10 @@ void init_eps(void) {
     print("SPI and Sensors Initialized\n");
 
     // ADC
+    adc_init_constants(ADC_EPS); //initialize adc
+    adc_init();
     // TODO
-    //print("ADC Initialized\n");
+    print("ADC Initialized\n");
 
     // CAN and MOBs
     init_can();

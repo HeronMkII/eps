@@ -13,11 +13,12 @@
 // lib-common libraries
 #include <can/can.h>
 #include <can/can_ids.h>
-#include <can/packets.h>
+#include <can/can_data_protocol.h>
 #include <queue/queue.h>
 #include <spi/spi.h>
 #include <uart/uart.h>
 #include <uart/log.h>
+#include <adc/adc.h>
 
 
 
