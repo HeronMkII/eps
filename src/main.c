@@ -8,25 +8,6 @@ queue_t rx_message_queue;
 // CAN messages to transmit
 queue_t tx_message_queue;
 
-void copy_string(uint8_t* array, char* place, uint8_t len){
-
-    for(int i=0; i<len; i++){
-
-        array[i] = place[i];
-
-    }
-
-}
-
-
-// Prints the given data in hex format, with a space between bytes
-void print_bytes(uint8_t *data, uint8_t len) {
-    for (uint8_t i = 0; i < len; i++) {
-        print("0x%02x ", data[i]);
-    }
-    print("\n");
-}
-
 
 
 
@@ -40,7 +21,7 @@ void handle_rx(void) {
     uint8_t rx_data[8];
     dequeue(&rx_message_queue, rx_data);
     print("Dequeued RX Message\n");
-    print_bytes(rx_data, 8);
+    print_hex_bytes(rx_data, 8);
 
     // Message to transmit
     uint8_t tx_data[8];
@@ -56,19 +37,14 @@ void handle_rx(void) {
     }
 
     // Check message type
-
     switch (rx_data[1]) {
+        uint16_t raw_data;
+
         case CAN_EPS_HK:
-            switch (rx_data[2]){
-                case CAN_EPS_HK_VOLTAGE:
-                    tx_data[3] = adc_read_channel_raw_data(rx_data[2]);
-                    // copy_string(tx_data, "hello11", 8);
-                    break;
-                case CAN_EPS_HK_CURRENT:
-                    // copy_string(tx_data, "hello12", 8);
-                    tx_data[3] = adc_read_channel_raw_data(rx_data[2]);
-                    break;
-            }
+            raw_data = adc_read_channel_raw_data(rx_data[2]);
+            tx_data[3] = 0x00;
+            tx_data[4] = (raw_data >> 8) & 0xFF;
+            tx_data[5] = raw_data & 0xFF;
             break;
 
         default:
@@ -81,7 +57,7 @@ void handle_rx(void) {
     // Enqueue TX data to transmit
     enqueue(&tx_message_queue, tx_data);
     print("Enqueued TX Message\n");
-    print_bytes(tx_data, 8);
+    print_hex_bytes(tx_data, 8);
 }
 
 
@@ -95,7 +71,7 @@ void handle_rx(void) {
 void status_rx_callback(const uint8_t* data, uint8_t len) {
     print("MOB 0: Status RX Callback\n");
     print("Received Message:\n");
-    print_bytes((uint8_t *) data, len);
+    print_hex_bytes((uint8_t *) data, len);
 }
 
 
@@ -118,7 +94,7 @@ void cmd_tx_callback(uint8_t* data, uint8_t* len) {
 void cmd_rx_callback(const uint8_t* data, uint8_t len) {
     print("\n\n\n\nMOB 4: CMD RX Callback\n");
     print("Received Message:\n");
-    print_bytes((uint8_t *) data, len);
+    print_hex_bytes((uint8_t *) data, len);
 
     // TODO - would this ever happen?
     if (len == 0) {
@@ -152,7 +128,7 @@ void data_tx_callback(uint8_t* data, uint8_t* len) {
 
         print("Dequeued TX Message\n");
         print("Transmitting Message:\n");
-        print_bytes(data, *len);
+        print_hex_bytes(data, *len);
     }
 }
 
