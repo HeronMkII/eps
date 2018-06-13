@@ -1,14 +1,6 @@
-
 // TODO - consider implementing function error checking (e.g. return 1 for success, 0 for failure)
 
 #include "main.h"
-
-// CAN messages received but not processed yet
-queue_t rx_message_queue;
-// CAN messages to transmit
-queue_t tx_message_queue;
-
-
 
 
 void handle_rx(void) {
@@ -61,81 +53,7 @@ void handle_rx(void) {
 }
 
 
-
-
-/* CAN Interrupts */
-
-
-// MOB 0
-// For heartbeat
-void status_rx_callback(const uint8_t* data, uint8_t len) {
-    print("MOB 0: Status RX Callback\n");
-    print("Received Message:\n");
-    print_hex_bytes((uint8_t *) data, len);
-}
-
-
-// MOB 1
-// For heartbeat
-void status_tx_callback(uint8_t* data, uint8_t* len) {
-    print("MOB 1: Status TX Callback\n");
-}
-
-
-// MOB 2
-// For later science requests?
-void cmd_tx_callback(uint8_t* data, uint8_t* len) {
-    print("MOB 2: CMD TX Callback\n");
-}
-
-
-// MOB 4
-// CAN RX interrupt for received commands
-void cmd_rx_callback(const uint8_t* data, uint8_t len) {
-    print("\n\n\n\nMOB 4: CMD RX Callback\n");
-    print("Received Message:\n");
-    print_hex_bytes((uint8_t *) data, len);
-
-    // TODO - would this ever happen?
-    if (len == 0) {
-        print("Received empty message\n");
-    }
-
-    // If the RX message exists, add it to the queue of received messages to process
-    else {
-        enqueue(&rx_message_queue, (uint8_t *) data);
-        print("Enqueued RX message");
-    }
-}
-
-
-// MOB 5
-// CAN TX interrupt for sending data
-void data_tx_callback(uint8_t* data, uint8_t* len) {
-    print("\nData TX Callback\n");
-
-    // TODO - would this ever happen?
-    if (is_empty(&tx_message_queue)) {
-        *len = 0;
-
-        print("No message to transmit\n");
-    }
-
-    // If there is a message in the TX queue, transmit it
-    else {
-        dequeue(&tx_message_queue, data);
-        *len = 8;
-
-        print("Dequeued TX Message\n");
-        print("Transmitting Message:\n");
-        print_hex_bytes(data, *len);
-    }
-}
-
-
-
-
-// Initializes everything in PAY
+// Initializes everything in EPS
 void init_eps(void) {
     // UART
     init_uart();
@@ -161,9 +79,6 @@ void init_eps(void) {
 
     // CAN and MOBs
     init_can();
-    init_rx_mob(&status_rx_mob);
-    init_tx_mob(&status_tx_mob);
-    init_tx_mob(&cmd_tx_mob);
     init_rx_mob(&cmd_rx_mob);
     init_tx_mob(&data_tx_mob);
     print("CAN Initialized\n");
