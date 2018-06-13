@@ -141,16 +141,23 @@ void init_eps(void) {
     init_uart();
     print("\n\nUART Initialized\n");
 
-    // SPI and sensors
+    // SPI
     init_spi();
-    // TODO - add sensor init
-    print("SPI and Sensors Initialized\n");
+    print("SPI Initialized\n");
 
     // ADC
     adc_init_constants(ADC_EPS); //initialize adc
     adc_init();
-    // TODO
     print("ADC Initialized\n");
+
+    // PEX
+    pex_init_constants(PEX_EPS);
+    pex_init();
+    print("PEX Initialized\n");
+
+    // Shunts
+    init_shunts();
+    print("Shunts Initialized\n");
 
     // CAN and MOBs
     init_can();
@@ -172,10 +179,14 @@ void init_eps(void) {
 
 int main(void) {
     init_eps();
+    print("---------------\n");
     print("EPS Initialized\n\n");
 
     // Main loop
+    print("Starting main loop\n");
     while (1) {
+        control_shunts();
+
         // If there is an RX messsage in the queue, handle it
         if (!is_empty(&rx_message_queue)) {
             handle_rx();
@@ -191,7 +202,7 @@ int main(void) {
         3) sends the data
         4) pauses the mob
         */
-        if (!is_empty(&tx_message_queue)) {
+        else if (!is_empty(&tx_message_queue)) {
             resume_mob(&data_tx_mob);
         }
     }

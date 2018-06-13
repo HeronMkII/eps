@@ -18,8 +18,10 @@
 #include <spi/spi.h>
 #include <uart/uart.h>
 #include <adc/adc.h>
+#include <pex/pex.h>
 #include <utilities/utilities.h>
 
+#include "shunts.h"
 
 
 
