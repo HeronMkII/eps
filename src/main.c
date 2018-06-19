@@ -1,5 +1,3 @@
-// TODO - consider implementing function error checking (e.g. return 1 for success, 0 for failure)
-
 #include "main.h"
 
 
@@ -43,8 +41,6 @@ void handle_rx(void) {
             print("Unknown message type\n");
             break;
     }
-
-    // TODO - should it not transmit if the received message is not recognized?
 
     // Enqueue TX data to transmit
     enqueue(&tx_message_queue, tx_data);
@@ -109,7 +105,6 @@ int main(void) {
 
         /*
         If there is a TX message in the queue, send it
-        TODO - should new data already be available to send instead of waiting for it?
 
         When resume_mob(mob name) is called, it:
         1) resumes the MOB

@@ -45,22 +45,23 @@ void control_shunts(void) {
     // Read positive battery voltage
     uint16_t raw_data_pos = adc_read_channel_raw_data(ADC_EPS_BATT_VPOS_CH);
     double raw_voltage_pos = adc_convert_raw_data_to_raw_voltage(raw_data_pos);
-    double voltage_pos = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_pos, ADC_EPS_BATT_VPOS_CH);
-    print("Positive Voltage:\n");
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %lf, Voltage: %lf\n\n",
+    double voltage_pos = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_pos);
+    print("Positive Voltage\n");
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %lf V, Voltage: %lf V\n\n",
             ADC_EPS_BATT_VPOS_CH, raw_data_pos, raw_voltage_pos, voltage_pos);
 
     // Read negative battery voltage
     uint16_t raw_data_neg = adc_read_channel_raw_data(ADC_EPS_BATT_VNEG_CH);
     double raw_voltage_neg = adc_convert_raw_data_to_raw_voltage(raw_data_neg);
-    double voltage_neg = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_neg, ADC_EPS_BATT_VNEG_CH);
-    print("Negative Voltage:\n");
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %lf, Voltage: %lf\n\n",
+    double voltage_neg = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_neg);
+    print("Negative Voltage\n");
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %lf V, Voltage: %lf V\n\n",
             ADC_EPS_BATT_VNEG_CH, raw_data_neg, raw_voltage_neg, voltage_neg);
 
     // Calculate differential battery voltage
+    // TODO - maybe take absolute value?
     double batt_voltage = voltage_pos - voltage_neg;
-    print("Battery Voltage: %lf\n", batt_voltage);
+    print("Battery Voltage: %lf V\n", batt_voltage);
 
     // Decide whether to switch the shunts on, off, or stay the same
     if (!are_shunts_on && batt_voltage > SHUNTS_ON_BATT_VOUT_THRESHOLD) {
@@ -70,6 +71,6 @@ void control_shunts(void) {
         turn_shunts_off();
         print("Turned shunts off\n");
     } else {
-        print("Left shunts the same\n");
+        print("No change in shunts\n");
     }
 }

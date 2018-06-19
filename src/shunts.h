@@ -10,13 +10,11 @@
 #define SHUNT_PEX_A_POS_Y_PIN 2
 #define SHUNT_PEX_A_NEG_Y_PIN 3
 
-// TODO
 // If the battery output voltage goes above this threshold,
 // the shunts should be turned on (battery charging off)
 #define SHUNTS_ON_BATT_VOUT_THRESHOLD 4.0
-// TODO
-// If the battery output voltage goes above this threshold,
-// the shunts should be turned on (battery charging on)
+// If the battery output voltage goes below this threshold,
+// the shunts should be turned off (battery charging on)
 #define SHUNTS_OFF_BATT_VOUT_THRESHOLD 3.0
 
 extern bool are_shunts_on;

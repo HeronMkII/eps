@@ -93,7 +93,6 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
     print("Received Message:\n");
     print_hex_bytes((uint8_t *) data, len);
 
-    // TODO - would this ever happen?
     if (len == 0) {
         print("Received empty message\n");
     }
@@ -111,7 +110,6 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
 void data_tx_callback(uint8_t* data, uint8_t* len) {
     print("\nData TX Callback\n");
 
-    // TODO - would this ever happen?
     if (is_empty(&tx_message_queue)) {
         *len = 0;
 
