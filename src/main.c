@@ -26,21 +26,21 @@ void handle_rx(void) {
         tx_data[i] = 0;
     }
 
-    // Check message type
-    switch (rx_data[1]) {
-        uint16_t raw_data;
-
-        case CAN_EPS_HK:
-            raw_data = adc_read_channel_raw_data(rx_data[2]);
-            tx_data[3] = 0x00;
-            tx_data[4] = (raw_data >> 8) & 0xFF;
-            tx_data[5] = raw_data & 0xFF;
-            break;
-
-        default:
-            print("Unknown message type\n");
-            break;
-    }
+    // // Check message type
+    // switch (rx_data[1]) {
+    //     uint16_t raw_data;
+    //
+    //     case CAN_EPS_HK:
+    //         raw_data = adc_read_channel_raw_data(rx_data[2]);
+    //         tx_data[3] = 0x00;
+    //         tx_data[4] = (raw_data >> 8) & 0xFF;
+    //         tx_data[5] = raw_data & 0xFF;
+    //         break;
+    //
+    //     default:
+    //         print("Unknown message type\n");
+    //         break;
+    // }
 
     // Enqueue TX data to transmit
     enqueue(&tx_message_queue, tx_data);
@@ -96,7 +96,7 @@ int main(void) {
     // Main loop
     print("Starting main loop\n");
     while (1) {
-        control_shunts();
+        // control_shunts();
 
         // If there is an RX messsage in the queue, handle it
         if (!is_empty(&rx_message_queue)) {
