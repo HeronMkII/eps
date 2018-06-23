@@ -12,7 +12,7 @@ void read_voltage(uint8_t channel) {
     uint16_t raw_data = adc_read_channel_raw_data(channel);
     double raw_voltage = adc_convert_raw_data_to_raw_voltage(raw_data);
     double voltage = adc_eps_convert_raw_voltage_to_voltage(raw_voltage);
-    print("Channel: %u, Raw Data: 0x%4x, Raw Voltage: %d mV, Voltage: %d mV\n\n",
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %d mV, Voltage: %d mV\n\n",
             channel, raw_data, (int16_t) (raw_voltage * 1000.0), (int16_t) (voltage * 1000.0));
 }
 
@@ -20,7 +20,7 @@ void read_current(uint8_t channel) {
     uint16_t raw_data = adc_read_channel_raw_data(channel);
     double raw_voltage = adc_convert_raw_data_to_raw_voltage(raw_data);
     double current = adc_eps_convert_raw_voltage_to_current(raw_voltage);
-    print("Channel: %u, Raw Data: 0x%4x, Raw Voltage: %d mV, Current: %d mA\n\n",
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %d mV, Current: %d mA\n\n",
             channel, raw_data, (int16_t) (raw_voltage * 1000.0), (int16_t) (current * 1000.0));
 }
 

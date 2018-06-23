@@ -89,8 +89,7 @@ mob_t data_tx_mob = {
 // MOB 4
 // CMD RX - received commands
 void cmd_rx_callback(const uint8_t* data, uint8_t len) {
-    print("\n\n\n\nMOB 4: CMD RX Callback\n");
-    print("Received Message:\n");
+    print("\n\nMOB 4: CMD RX Callback\n");
     print_hex_bytes((uint8_t *) data, len);
 
     if (len == 0) {
@@ -101,7 +100,7 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
     else {
 		if (data[1] == CAN_EPS_HK) {
 	        enqueue(&rx_message_queue, (uint8_t *) data);
-	        print("Enqueued RX message\n");
+	        print("Enqueued RX\n");
 		}
     }
 }
@@ -110,11 +109,10 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
 // MOB 5
 // DATA TX - transmitting data
 void data_tx_callback(uint8_t* data, uint8_t* len) {
-    print("\nData TX Callback\n");
+    print("\n\nMOB 5: Data TX Callback\n");
 
     if (is_empty(&tx_message_queue)) {
         *len = 0;
-
         print("No message to transmit\n");
     }
 
@@ -123,7 +121,7 @@ void data_tx_callback(uint8_t* data, uint8_t* len) {
         dequeue(&tx_message_queue, data);
         *len = 8;
 
-        print("Dequeued TX Message\n");
+        print("Dequeued TX\n");
         print("Transmitting Message:\n");
         print_hex_bytes(data, *len);
     }

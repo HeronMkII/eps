@@ -3,49 +3,42 @@
 
 void handle_rx(void) {
     if (is_empty(&rx_message_queue)) {
-        print("No data in RX message queue\n");
+        print("RX queue empty\n");
         return;
     }
 
     // Received message
     uint8_t rx_data[8];
     dequeue(&rx_message_queue, rx_data);
-    print("Dequeued RX Message\n");
+    print("Dequeued RX\n");
     print_hex_bytes(rx_data, 8);
 
-    // Message to transmit
-    uint8_t tx_data[8];
+    // Check message type
+    if (rx_data[1] == CAN_EPS_HK) {
+        // TODO
+        // uint16_t raw_data = adc_read_channel_raw_data(rx_data[2]);
+        uint16_t raw_data = rand() % 32767;
 
-    // Send back the message type and field number
-    tx_data[0] = rx_data[0];
-    tx_data[1] = rx_data[1];
-    tx_data[2] = rx_data[2];
+        // Message to transmit
+        uint8_t tx_data[8] = { 0 };
 
-    // Fill the rest with zeros just in case
-    for (uint8_t i = 3; i < 8; i++) {
-        tx_data[i] = 0;
+        // Send back the message type and field number
+        tx_data[0] = 0; // TODO
+        tx_data[1] = rx_data[1];
+        tx_data[2] = rx_data[2];
+        tx_data[3] = 0x00;
+        tx_data[4] = (raw_data >> 8) & 0xFF;
+        tx_data[5] = raw_data & 0xFF;
+
+        // Enqueue TX data to transmit
+        enqueue(&tx_message_queue, tx_data);
+        print("Enqueued TX\n");
+        print_hex_bytes(tx_data, 8);
     }
 
-    // // Check message type
-    // switch (rx_data[1]) {
-    //     uint16_t raw_data;
-    //
-    //     case CAN_EPS_HK:
-    //         raw_data = adc_read_channel_raw_data(rx_data[2]);
-    //         tx_data[3] = 0x00;
-    //         tx_data[4] = (raw_data >> 8) & 0xFF;
-    //         tx_data[5] = raw_data & 0xFF;
-    //         break;
-    //
-    //     default:
-    //         print("Unknown message type\n");
-    //         break;
-    // }
-
-    // Enqueue TX data to transmit
-    enqueue(&tx_message_queue, tx_data);
-    print("Enqueued TX Message\n");
-    print_hex_bytes(tx_data, 8);
+    else {
+        print("Unknown message type\n");
+    }
 }
 
 
@@ -53,36 +46,35 @@ void handle_rx(void) {
 void init_eps(void) {
     // UART
     init_uart();
-    print("\n\nUART Initialized\n");
+    print("\n\nInitializing EPS\n");
+    print("UART\n");
 
     // SPI
     init_spi();
-    print("SPI Initialized\n");
+    print("SPI\n");
 
     // ADC
-    adc_init_constants(ADC_EPS); //initialize adc
-    adc_init();
-    print("ADC Initialized\n");
+    adc_init(ADC_EPS);
+    print("ADC\n");
 
     // PEX
-    pex_init_constants(PEX_EPS);
-    pex_init();
-    print("PEX Initialized\n");
+    pex_init(PEX_EPS);
+    print("PEX\n");
 
     // Shunts
     init_shunts();
-    print("Shunts Initialized\n");
-
-    // CAN and MOBs
-    init_can();
-    init_rx_mob(&cmd_rx_mob);
-    init_tx_mob(&data_tx_mob);
-    print("CAN Initialized\n");
+    print("Shunts\n");
 
     // Queues
     init_queue(&rx_message_queue);
     init_queue(&tx_message_queue);
     print("Queues Initialized\n");
+
+    // CAN and MOBs
+    init_can();
+    init_rx_mob(&cmd_rx_mob);
+    init_tx_mob(&data_tx_mob);
+    print("CAN\n");
 }
 
 
@@ -90,11 +82,12 @@ void init_eps(void) {
 
 int main(void) {
     init_eps();
-    print("---------------\n");
+    print("----\n");
     print("EPS Initialized\n\n");
 
     // Main loop
     print("Starting main loop\n");
+
     while (1) {
         // control_shunts();
 

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <pex/pex.h>
 #include <adc/adc.h>
+#include <conversions/conversions.h>
 
 #define SHUNT_PEX_A_POS_X_PIN 0
 #define SHUNT_PEX_A_NEG_X_PIN 1

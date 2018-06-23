@@ -1,14 +1,12 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-// Definition necessary for <util/delay.h>
-#ifndef F_CPU
-#define F_CPU 8000000UL
-#endif
+#include <utilities/utilities.h>
 
 // Standard libraries
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 // AVR libraries
 #include <util/delay.h>
@@ -22,7 +20,6 @@
 #include <uart/uart.h>
 #include <adc/adc.h>
 #include <pex/pex.h>
-#include <utilities/utilities.h>
 
 #include "shunts.h"
 #include "can_callbacks.h"

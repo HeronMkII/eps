@@ -7,7 +7,8 @@ PGMR = stk500
 MCU = m32m1
 
 #PORT = COM8
-PORT = /dev/tty.usbmodem00208212
+#PORT = /dev/tty.usbmodem00208212
+PORT = /dev/tty.usbmodem00187464
 
 # SRC is defined in the example-specific makefile
 OBJ = $(SRC:../../src%.c=..%.o)
