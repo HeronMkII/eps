@@ -22,7 +22,7 @@
 #include <pex/pex.h>
 
 #include "shunts.h"
-#include "can_callbacks.h"
+// #include "can_callbacks.h"
 
 void handle_rx(void);
 void init_eps(void);
