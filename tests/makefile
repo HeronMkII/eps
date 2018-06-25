@@ -1,6 +1,6 @@
 CC = avr-gcc
 INCLUDES = -I../../lib-common/include
-LIB = -L../../lib-common/lib -ladc -luart -lspi -lcan -lpex
+LIB = -L../../lib-common/lib -ladc -luart -lspi -lcan -lpex -lconversions
 CFLAGS = -Wall -g -mmcu=atmega32m1 -Os -mcall-prologues
 
 PGMR = stk500
@@ -8,7 +8,7 @@ MCU = m32m1
 
 #PORT = COM8
 #PORT = /dev/tty.usbmodem00208212
-PORT = /dev/tty.usbmodem00187464
+PORT = /dev/tty.usbmodem00187462
 
 # SRC is defined in the example-specific makefile
 OBJ = $(SRC:../../src%.c=..%.o)
