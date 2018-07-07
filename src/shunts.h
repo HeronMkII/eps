@@ -6,10 +6,6 @@
 #include <adc/adc.h>
 #include <conversions/conversions.h>
 
-#define SHUNT_PEX_A_POS_X_PIN 0
-#define SHUNT_PEX_A_NEG_X_PIN 1
-#define SHUNT_PEX_A_POS_Y_PIN 2
-#define SHUNT_PEX_A_NEG_Y_PIN 3
 
 // If the battery output voltage goes above this threshold,
 // the shunts should be turned on (battery charging off)
