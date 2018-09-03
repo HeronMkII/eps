@@ -1,14 +1,17 @@
+/*
+An outdated test for sending dummy messages (strings) to and from EPS over CAN.
+*/
+
 #ifndef F_CPU
 #define F_CPU 8000000UL
 #endif
 
 #include <uart/uart.h>
-#include <uart/log.h>
 #include <can/can.h>
-#include <can/can_ids.h>
-#include <can/packets.h>
+#include <can/ids.h>
+#include <can/data_protocol.h>
 #include <util/delay.h>
-#include <assert/assert.h>
+#include <stdbool.h>
 
 // Counter for which request to send (0-3)
 uint8_t req_num = 3;            // current
@@ -32,19 +35,11 @@ mob_t rx_mob = {
     .dlc = 8,
     .id_tag = OBC_DATA_RX_MOB_ID,
     .id_mask = CAN_RX_MASK_ID,
-    // .id_mask = { 0x0000 },
     .ctrl = default_rx_ctrl,
 
     .rx_cb = rx_callback
 };
 
-
-void print_bytes(uint8_t *data, uint8_t len) {
-    for (uint8_t i = 0; i < len; i++) {
-        print("0x%02x ", data[i]);
-    }
-    print("\n");
-}
 
 bool string_equal(uint8_t *array, char *string, uint8_t len) {
     for (uint8_t i = 0; i < len; i++) {
@@ -55,8 +50,6 @@ bool string_equal(uint8_t *array, char *string, uint8_t len) {
 
     return true;
 }
-
-
 
 
 void tx_callback(uint8_t* data, uint8_t* len) {
@@ -106,36 +99,32 @@ void rx_callback(const uint8_t* data, uint8_t len) {
     print_bytes((uint8_t *) data, len);
     print("%s\n", (char *) data);
 
-    switch (req_num) {
-        case 0:
-            ASSERT(string_equal((uint8_t *) data, "hello11", 8));
-            break;
-
-        case 1:
-            ASSERT(string_equal((uint8_t *) data, "hello12", 8));
-            break;
-
-        case 2:
-            ASSERT(string_equal((uint8_t *) data, "hello21", 8));
-            break;
-
-        case 3:
-            ASSERT(string_equal((uint8_t *) data, "hello22", 8));
-            break;
-
-        default:
-            break;
-    }
+    // switch (req_num) {
+    //     case 0:
+    //         ASSERT(string_equal((uint8_t *) data, "hello11", 8));
+    //         break;
+    //
+    //     case 1:
+    //         ASSERT(string_equal((uint8_t *) data, "hello12", 8));
+    //         break;
+    //
+    //     case 2:
+    //         ASSERT(string_equal((uint8_t *) data, "hello21", 8));
+    //         break;
+    //
+    //     case 3:
+    //         ASSERT(string_equal((uint8_t *) data, "hello22", 8));
+    //         break;
+    //
+    //     default:
+    //         break;
+    // }
 }
-
-
 
 
 int main(void) {
     init_uart();
     print("\n\nUART Initialized\n");
-
-    assert_print_on_pass = true;
 
     init_can();
     init_tx_mob(&tx_mob);
@@ -146,7 +135,5 @@ int main(void) {
         resume_mob(&tx_mob);
         while (!is_paused(&tx_mob)) {};
         _delay_ms(5000);
-
-        assert_print_results();
     }
 }

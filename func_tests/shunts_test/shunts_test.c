@@ -16,10 +16,6 @@ int main(void) {
     init_spi();
     print("SPI Initialized\n");
 
-    pex_init_constants(PEX_EPS);
-    pex_init();
-    print("PEX Initialized\n");
-
     init_shunts();
     print("Shunts Initialized\n");
 

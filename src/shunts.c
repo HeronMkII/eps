@@ -9,12 +9,46 @@ solar panels and batteries.
 // false - shunts are OFF, battery charging is ON
 bool are_shunts_on = true;
 
+pin_info_t pex_cs = {
+    .port = &PEX_CS_PORT_EPS,
+    .ddr = &PEX_CS_DDR_EPS,
+    .pin = PEX_CS_PIN_EPS
+};
+
+pin_info_t pex_rst = {
+    .port = &PEX_RST_PORT_EPS,
+    .ddr = &PEX_RST_DDR_EPS,
+    .pin = PEX_RST_PIN_EPS
+};
+
+pex_t pex = {
+    .addr = PEX_ADDR_EPS,
+    .cs = &pex_cs,
+    .rst = &pex_rst
+};
+
+
+pin_info_t adc_cs = {
+    .port = &ADC_CS_PORT_EPS,
+    .ddr = &ADC_CS_DDR_EPS,
+    .pin = ADC_CS_PIN_EPS
+};
+
+adc_t adc = {
+    .channels = 0x0FFF, // Read channels 0-11 when in AUTO-1 mode
+    .cs = &adc_cs
+};
+
+
 // Initializes shunts as output pins
 void init_shunts(void) {
-    pex_set_dir_a(SHUNT_PEX_A_POS_X_PIN, PEX_DIR_OUTPUT);
-    pex_set_dir_a(SHUNT_PEX_A_NEG_X_PIN, PEX_DIR_OUTPUT);
-    pex_set_dir_a(SHUNT_PEX_A_POS_Y_PIN, PEX_DIR_OUTPUT);
-    pex_set_dir_a(SHUNT_PEX_A_NEG_Y_PIN, PEX_DIR_OUTPUT);
+    init_pex(&pex);
+    pex_set_pin_dir(&pex, PEX_EPS_SHUNT_PX_PIN, PEX_A, OUTPUT);
+    pex_set_pin_dir(&pex, PEX_EPS_SHUNT_NX_PIN, PEX_A, OUTPUT);
+    pex_set_pin_dir(&pex, PEX_EPS_SHUNT_PY_PIN, PEX_A, OUTPUT);
+    pex_set_pin_dir(&pex, PEX_EPS_SHUNT_NY_PIN, PEX_A, OUTPUT);
+
+    init_adc(&adc);
 
     turn_shunts_on();
 }
@@ -22,10 +56,10 @@ void init_shunts(void) {
 // Turns all shunt MOSFETS ON, meaning the current from the solar panels will be
 // shorted to ground and the batteries STOP CHARGING
 void turn_shunts_on(void) {
-    pex_set_gpio_a_high(SHUNT_PEX_A_POS_X_PIN);
-    pex_set_gpio_a_high(SHUNT_PEX_A_NEG_X_PIN);
-    pex_set_gpio_a_high(SHUNT_PEX_A_POS_Y_PIN);
-    pex_set_gpio_a_high(SHUNT_PEX_A_NEG_Y_PIN);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_PX_PIN, PEX_A, HIGH);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_NX_PIN, PEX_A, HIGH);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_PY_PIN, PEX_A, HIGH);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_NY_PIN, PEX_A, HIGH);
 
     are_shunts_on = true;
 }
@@ -33,30 +67,36 @@ void turn_shunts_on(void) {
 // Turns all shunt MOSFETS OFF, meaning the current from the solar panels will
 // go to the battery and the batteries START CHARGING
 void turn_shunts_off(void) {
-    pex_set_gpio_a_low(SHUNT_PEX_A_POS_X_PIN);
-    pex_set_gpio_a_low(SHUNT_PEX_A_NEG_X_PIN);
-    pex_set_gpio_a_low(SHUNT_PEX_A_POS_Y_PIN);
-    pex_set_gpio_a_low(SHUNT_PEX_A_NEG_Y_PIN);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_PX_PIN, PEX_A, LOW);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_NX_PIN, PEX_A, LOW);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_PY_PIN, PEX_A, LOW);
+    pex_set_pin(&pex, PEX_EPS_SHUNT_NY_PIN, PEX_A, LOW);
 
     are_shunts_on = false;
 }
 
 void control_shunts(void) {
+    uint8_t channel;
+
     // Read positive battery voltage
-    uint16_t raw_data_pos = adc_read_channel_raw_data(ADC_EPS_BATT_VPOS_CH);
-    double raw_voltage_pos = adc_convert_raw_data_to_raw_voltage(raw_data_pos);
-    double voltage_pos = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_pos);
+    channel = ADC_EPS_BATT_VPOS_CH;
+    fetch_channel(&adc, channel);
+    uint16_t raw_data_pos = read_channel(&adc, channel);
+    double raw_voltage_pos = adc_raw_data_to_raw_voltage(raw_data_pos);
+    double voltage_pos = adc_eps_raw_voltage_to_voltage(raw_voltage_pos);
     print("Positive Voltage\n");
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %d V, Voltage: %d V\n\n",
-            ADC_EPS_BATT_VPOS_CH, raw_data_pos, (int8_t) raw_voltage_pos, (int8_t) voltage_pos);
+            channel, raw_data_pos, (int8_t) raw_voltage_pos, (int8_t) voltage_pos);
 
     // Read negative battery voltage
-    uint16_t raw_data_neg = adc_read_channel_raw_data(ADC_EPS_BATT_VNEG_CH);
-    double raw_voltage_neg = adc_convert_raw_data_to_raw_voltage(raw_data_neg);
-    double voltage_neg = adc_eps_convert_raw_voltage_to_voltage(raw_voltage_neg);
+    channel = ADC_EPS_BATT_VNEG_CH;
+    fetch_channel(&adc, channel);
+    uint16_t raw_data_neg = read_channel(&adc, channel);
+    double raw_voltage_neg = adc_raw_data_to_raw_voltage(raw_data_neg);
+    double voltage_neg = adc_eps_raw_voltage_to_voltage(raw_voltage_neg);
     print("Negative Voltage\n");
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %d V, Voltage: %d V\n\n",
-            ADC_EPS_BATT_VNEG_CH, raw_data_neg, (int8_t) raw_voltage_neg, (int8_t) voltage_neg);
+            channel, raw_data_neg, (int8_t) raw_voltage_neg, (int8_t) voltage_neg);
 
     // Calculate differential battery voltage
     // TODO - maybe take absolute value?
@@ -66,10 +106,10 @@ void control_shunts(void) {
     // Decide whether to switch the shunts on, off, or stay the same
     if (!are_shunts_on && batt_voltage > SHUNTS_ON_BATT_VOUT_THRESHOLD) {
         turn_shunts_on();
-        print("Turned shunts on\n");
+        print("Shunts on\n");
     } else if (are_shunts_on && batt_voltage < SHUNTS_OFF_BATT_VOUT_THRESHOLD) {
         turn_shunts_off();
-        print("Turned shunts off\n");
+        print("Shunts off\n");
     } else {
         // print("No change in shunts\n");
     }

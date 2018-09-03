@@ -3,8 +3,11 @@
 
 #include <stdbool.h>
 #include <pex/pex.h>
+#include <pex/eps.h>
 #include <adc/adc.h>
+#include <adc/eps.h>
 #include <conversions/conversions.h>
+#include <uart/uart.h>
 
 
 // If the battery output voltage goes above this threshold,
