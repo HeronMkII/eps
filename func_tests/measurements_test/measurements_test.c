@@ -50,23 +50,23 @@ int main(void) {
         print("ADC_EPS_BATT_VNEG_CH\n");
         read_voltage(ADC_EPS_BATT_VNEG_CH);
 
-        // print("ADC_EPS_BB1_IOUT_CH\n");
-        // read_current(ADC_EPS_BB1_IOUT_CH);
+        print("ADC_EPS_BB1_IOUT_CH\n");
+        read_current(ADC_EPS_BB1_IOUT_CH);
         print("ADC_EPS_BB2_IOUT_CH\n");
         read_current(ADC_EPS_BB2_IOUT_CH);
-        // print("ADC_EPS_BT1_IOUT_CH\n");
-        // read_current(ADC_EPS_BT1_IOUT_CH);
+        print("ADC_EPS_BT1_IOUT_CH\n");
+        read_current(ADC_EPS_BT1_IOUT_CH);
         print("ADC_EPS_BATT_IOUT_CH\n");
         read_current(ADC_EPS_BATT_IOUT_CH);
 
-        // print("ADC_EPS_PV_POS_X_IOUT_CH\n");
-        // read_current(ADC_EPS_PV_POS_X_IOUT_CH);
-        // print("ADC_EPS_PV_NEG_X_IOUT_CH\n");
-        // read_current(ADC_EPS_PV_NEG_X_IOUT_CH);
-        // print("ADC_EPS_PV_POS_Y_IOUT_CH\n");
-        // read_current(ADC_EPS_PV_POS_Y_IOUT_CH);
-        // print("ADC_EPS_PV_NEG_Y_IOUT_CH\n");
-        // read_current(ADC_EPS_PV_NEG_Y_IOUT_CH);
+        print("ADC_EPS_PV_POS_X_IOUT_CH\n");
+        read_current(ADC_EPS_PV_POS_X_IOUT_CH);
+        print("ADC_EPS_PV_NEG_X_IOUT_CH\n");
+        read_current(ADC_EPS_PV_NEG_X_IOUT_CH);
+        print("ADC_EPS_PV_POS_Y_IOUT_CH\n");
+        read_current(ADC_EPS_PV_POS_Y_IOUT_CH);
+        print("ADC_EPS_PV_NEG_Y_IOUT_CH\n");
+        read_current(ADC_EPS_PV_NEG_Y_IOUT_CH);
 
         print("\n");
         _delay_ms(5000);
