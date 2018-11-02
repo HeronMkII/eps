@@ -8,7 +8,7 @@
 #include <adc/eps.h>
 #include <conversions/conversions.h>
 #include <uart/uart.h>
-
+#include "eps.h"
 
 // If the battery output voltage goes above this threshold,
 // the shunts should be turned on (battery charging off)
