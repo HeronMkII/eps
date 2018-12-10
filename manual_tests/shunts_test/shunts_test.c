@@ -1,10 +1,6 @@
-#ifndef F_CPU
-#define F_CPU 8000000L
-#endif
-
 #include <uart/uart.h>
 #include <pex/pex.h>
-#include <util/delay.h>
+
 #include "../../src/shunts.h"
 
 // This test reads the raw data and voltages on each ADC channel

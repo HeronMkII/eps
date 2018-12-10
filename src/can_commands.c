@@ -1,4 +1,11 @@
-#include "commands.h"
+#include "can_commands.h"
+
+
+// CAN messages received but not processed yet
+queue_t can_rx_msgs;
+// CAN messages that need to be transmitted (when possible)
+queue_t can_tx_msgs;
+
 
 // Checks the RX message queue and processes the first message (if it exists)
 void handle_rx_msg(void) {
