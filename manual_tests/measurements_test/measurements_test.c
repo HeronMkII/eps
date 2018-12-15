@@ -1,12 +1,7 @@
-#ifndef F_CPU
-#define F_CPU 8000000L
-#endif
-
 #include <uart/uart.h>
 #include <adc/adc.h>
 #include <adc/eps.h>
 #include <spi/spi.h>
-#include <util/delay.h>
 #include <conversions/conversions.h>
 
 pin_info_t adc_cs = {

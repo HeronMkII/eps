@@ -1,5 +1,5 @@
 // Standard libraries
-#include "eps.h"
+#include "general.h"
 
 int main(void) {
     init_eps();

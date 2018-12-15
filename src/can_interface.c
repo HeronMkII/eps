@@ -1,14 +1,6 @@
 #include "can_interface.h"
 
 
-// CAN messages received but not processed yet
-queue_t can_rx_msgs;
-// CAN messages that need to be transmitted (when possible)
-queue_t can_tx_msgs;
-
-
-
-
 /* CAN Interrupts */
 
 // MOB 0
