@@ -174,8 +174,8 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
     }
 
     uint8_t next_field_num = tx_msg[2] + 1;
-    if (next_field_num < CAN_PAY_HK_GET_COUNT) {
-        enqueue_rx_msg(CAN_PAY_HK, next_field_num);
+    if (next_field_num < CAN_EPS_HK_GET_COUNT) {
+        enqueue_rx_msg(CAN_EPS_HK, next_field_num);
     }
 }
 

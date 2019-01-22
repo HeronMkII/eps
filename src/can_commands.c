@@ -47,7 +47,8 @@ void handle_rx_msg(void) {
         if ((CAN_EPS_HK_BB_VOL <= field_num) &&
                 (field_num <= CAN_EPS_HK_BAT_TEMP2)) {
             if (sim_local_actions) {
-                data = random() & 0x7FFF;
+                // use 11 bits for ADC data
+                data = random() & 0x7FF;
             } else {
                 uint8_t channel = field_num - CAN_EPS_HK_BB_VOL;
                 fetch_channel(&adc, channel);
@@ -64,7 +65,7 @@ void handle_rx_msg(void) {
         else if ((CAN_EPS_HK_GET_DAC1 <= field_num) &&
                 (field_num <= CAN_EPS_HK_GET_DAC2)) {
             // TODO - get DAC data
-            data = random() & 0x7FFF;
+            data = random() & 0x7FF;
         }
 
         else if ((CAN_EPS_HK_SET_DAC1 <= field_num) &&
