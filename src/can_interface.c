@@ -33,7 +33,7 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
     // If the RX message exists, add it to the queue of received messages to process
     else {
 		if (data[1] == CAN_EPS_HK) {
-	        enqueue(&can_rx_msgs, (uint8_t *) data);
+	        enqueue(&can_rx_msg_queue, (uint8_t *) data);
 	        print("Enqueued RX\n");
 		}
     }
@@ -44,14 +44,14 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
 void data_tx_callback(uint8_t* data, uint8_t* len) {
     print("\n\nMOB 5: Data TX Callback\n");
 
-    if (queue_empty(&can_tx_msgs)) {
+    if (queue_empty(&can_tx_msg_queue)) {
         *len = 0;
         print("No message to transmit\n");
     }
 
     // If there is a message in the TX queue, transmit it
     else {
-        dequeue(&can_tx_msgs, data);
+        dequeue(&can_tx_msg_queue, data);
         *len = 8;
 
         print("Dequeued TX\n");

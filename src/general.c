@@ -19,8 +19,8 @@ void init_eps(void) {
     init_shunts();
 
     // Queues
-    init_queue(&can_rx_msgs);
-    init_queue(&can_tx_msgs);
+    init_queue(&can_rx_msg_queue);
+    init_queue(&can_tx_msg_queue);
 
     // CAN and MOBs
     init_can();
@@ -31,7 +31,7 @@ void init_eps(void) {
 
 // If there is an RX messsage in the queue, handle it
 void process_next_rx_msg(void) {
-    if (!queue_empty(&can_rx_msgs)) {
+    if (!queue_empty(&can_rx_msg_queue)) {
         handle_rx_msg();
     }
 }
@@ -47,7 +47,7 @@ When resume_mob(mob name) is called, it:
 */
 // Checks the TX message queue and sends the first message (if it exists)
 void send_next_tx_msg(void) {
-    if (!queue_empty(&can_tx_msgs)) {
+    if (!queue_empty(&can_tx_msg_queue)) {
         resume_mob(&data_tx_mob);
     }
 }
