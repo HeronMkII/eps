@@ -10,7 +10,7 @@ RX and TX are defined from EPS's perspective.
 
 #include "../../src/general.h"
 
-// Set to false to stop printing EPS's TX and RX CAN messages
+// Set to true to print EPS's TX and RX CAN messages
 bool print_can_msgs = false;
 
 
@@ -51,18 +51,18 @@ void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number) {
 
 
 void print_voltage(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f V\n", raw_data, adc_eps_raw_data_to_voltage(raw_data));
+    print(" 0x%.3X = %.3f V\n", raw_data, adc_raw_data_to_eps_vol(raw_data));
 }
 
 void print_current(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f A\n", raw_data, adc_eps_raw_data_to_current(raw_data));
+    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_eps_cur(raw_data));
 }
 
 void print_therm_temp(uint16_t raw_data) {
     print(" 0x%.3X = %.2f C\n", raw_data,
         therm_res_to_temp(
         therm_vol_to_res(
-        adc_raw_data_to_raw_voltage(raw_data))));
+        adc_raw_data_to_raw_vol(raw_data))));
 }
 
 void print_imu_data(uint16_t raw_data) {
