@@ -1,5 +1,6 @@
 #include "devices.h"
 
+// ADC
 pin_info_t adc_cs = {
     .port = &ADC_CS_PORT_EPS,
     .ddr = &ADC_CS_DDR_EPS,
@@ -10,6 +11,7 @@ adc_t adc = {
     .cs = &adc_cs
 };
 
+// PEX
 pin_info_t pex_cs = {
     .port = &PEX_CS_PORT_EPS,
     .ddr = &PEX_CS_DDR_EPS,
@@ -24,4 +26,23 @@ pex_t pex = {
     .addr = PEX_ADDR_EPS,
     .cs = &pex_cs,
     .rst = &pex_rst
+};
+
+// DAC
+// TODO - make constants
+pin_info_t dac_cs = {
+    .pin = PB4,
+    .ddr = &DDRB,
+    .port = &PORTB
+};
+pin_info_t dac_clr = {
+    .pin = PC7,
+    .ddr = &DDRC,
+    .port = &PORTC
+};
+dac_t dac = {
+    .cs = &dac_cs,
+    .clr = &dac_clr,
+    .raw_voltage_a = 0,
+    .raw_voltage_b = 0
 };
