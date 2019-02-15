@@ -10,7 +10,9 @@ RX and TX are defined from EPS's perspective.
 
 #include "../../src/general.h"
 
-// Set to false to stop printing EPS's TX and RX CAN messages
+// Set to true to simulate OBC's CAN messages
+bool sim_obc = false;
+// Set to true to print EPS's TX and RX CAN messages
 bool print_can_msgs = false;
 
 
@@ -51,18 +53,18 @@ void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number) {
 
 
 void print_voltage(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f V\n", raw_data, adc_eps_raw_data_to_voltage(raw_data));
+    print(" 0x%.3X = %.3f V\n", raw_data, adc_raw_data_to_eps_vol(raw_data));
 }
 
 void print_current(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f A\n", raw_data, adc_eps_raw_data_to_current(raw_data));
+    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_eps_cur(raw_data));
 }
 
 void print_therm_temp(uint16_t raw_data) {
     print(" 0x%.3X = %.2f C\n", raw_data,
         therm_res_to_temp(
         therm_vol_to_res(
-        adc_raw_data_to_raw_voltage(raw_data))));
+        adc_raw_data_to_raw_vol(raw_data))));
 }
 
 void print_imu_data(uint16_t raw_data) {
@@ -281,10 +283,13 @@ int main(void) {
 
     print("\n\n\nStarting commands test\n\n");
 
-    // Change this as necessary for testing
+    // Change these as necessary for testing
     sim_local_actions = true;
+    sim_obc = true;
+    print_can_msgs = true;
+
     print("sim_local_actions = %u\n", sim_local_actions);
-    print_can_msgs = false;
+    print("sim_obc = %u\n", sim_obc);
     print("print_can_msgs = %u\n", print_can_msgs);
 
     print("At any time, press h to show the command menu\n");
@@ -293,7 +298,11 @@ int main(void) {
 
     while(1) {
         print_next_tx_msg();
-        sim_send_next_tx_msg();
+        if (sim_obc) {
+            sim_send_next_tx_msg();
+        } else {
+            send_next_tx_msg();
+        }
 
         print_next_rx_msg();
         process_next_rx_msg();
