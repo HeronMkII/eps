@@ -33,22 +33,21 @@ uart_cmd_t all_cmds[] = {
         .fn = read_thermistor_data_fn
     },
     {
-        .description = "Turn heaters 1-4 on",
+        .description = "Turn heater 1 on",
         .fn = turn_heater_1_on_fn
     },
     {
-        .description = "Turn heaters 1-4 off",
+        .description = "Turn heater 1 off",
         .fn = turn_heater_1_off_fn
     },
     {
-        .description = "Turn heater 5 on",
+        .description = "Turn heater 2 on",
         .fn = turn_heater_2_on_fn
     },
     {
-        .description = "Turn heater 5 off",
+        .description = "Turn heater 2 off",
         .fn = turn_heater_2_off_fn
-    },
-
+    }
 };
 // Length of array
 const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
