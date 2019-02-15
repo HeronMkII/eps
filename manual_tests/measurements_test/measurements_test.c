@@ -4,24 +4,16 @@
 #include <spi/spi.h>
 #include <conversions/conversions.h>
 
-pin_info_t adc_cs = {
-    .port = &ADC_CS_PORT_EPS,
-    .ddr = &ADC_CS_DDR_EPS,
-    .pin = ADC_CS_PIN_EPS
-};
-
-adc_t adc = {
-    .channels = 0x0000, // don't poll any ADC pins in auto-1 mode
-    .cs = &adc_cs
-};
+#include "../../src/devices.h"
+#include "../../src/measurements.h"
 
 void read_voltage(uint8_t channel) {
     fetch_channel(&adc, channel);
     uint16_t raw_data = read_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double voltage = adc_raw_vol_to_eps_vol(raw_voltage);
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %ld mV, Voltage: %ld mV\n\n",
-            channel, raw_data, (int32_t) (raw_voltage * 1000.0), (int32_t) (voltage * 1000.0));
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Voltage: %.6f V\n",
+            channel, raw_data, raw_voltage, voltage);
 }
 
 void read_current(uint8_t channel) {
@@ -29,8 +21,17 @@ void read_current(uint8_t channel) {
     uint16_t raw_data = read_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double current = adc_raw_vol_to_eps_cur(raw_voltage);
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %ld mV, Current: %ld mA\n\n",
-            channel, raw_data, (int32_t) (raw_voltage * 1000.0), (int32_t) (current * 1000.0));
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Current: %.6f A\n",
+            channel, raw_data, raw_voltage, current);
+}
+
+void read_therm(uint8_t channel) {
+    fetch_channel(&adc, channel);
+    uint16_t raw_data = read_channel(&adc, channel);
+    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
+    double temp = adc_raw_data_to_therm_temp(raw_data);
+    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Temperature: %.6f C\n",
+            channel, raw_data, raw_voltage, temp);
 }
 
 
@@ -44,37 +45,35 @@ int main(void) {
     print("SPI Initialized\n");
 
     init_adc(&adc);
-    print("ADC Initialized\n\n");
+    print("ADC Initialized\n");
 
-    print("Starting test\n\n");
+    print("\nStarting test\n\n");
 
     while(1) {
-        print("ADC_EPS_BB_VOUT_CH\n");
-        read_voltage(ADC_EPS_BB_VOUT_CH);
-        print("ADC_EPS_BT_VOUT_CH\n");
-        read_voltage(ADC_EPS_BT_VOUT_CH);
-        print("ADC_EPS_BATT_VPOS_CH\n");
-        read_voltage(ADC_EPS_BATT_VPOS_CH);
-        print("ADC_EPS_BATT_VNEG_CH\n");
-        read_voltage(ADC_EPS_BATT_VNEG_CH);
-
-        print("ADC_EPS_BB1_IOUT_CH\n");
-        read_current(ADC_EPS_BB1_IOUT_CH);
-        print("ADC_EPS_BB2_IOUT_CH\n");
-        read_current(ADC_EPS_BB2_IOUT_CH);
-        print("ADC_EPS_BT1_IOUT_CH\n");
-        read_current(ADC_EPS_BT1_IOUT_CH);
-        print("ADC_EPS_BATT_IOUT_CH\n");
-        read_current(ADC_EPS_BATT_IOUT_CH);
-
-        print("ADC_EPS_PV_POS_X_IOUT_CH\n");
-        read_current(ADC_EPS_PV_POS_X_IOUT_CH);
-        print("ADC_EPS_PV_NEG_X_IOUT_CH\n");
-        read_current(ADC_EPS_PV_NEG_X_IOUT_CH);
-        print("ADC_EPS_PV_POS_Y_IOUT_CH\n");
-        read_current(ADC_EPS_PV_POS_Y_IOUT_CH);
-        print("ADC_EPS_PV_NEG_Y_IOUT_CH\n");
-        read_current(ADC_EPS_PV_NEG_Y_IOUT_CH);
+        print("BB VOUT\n");
+        read_voltage(MEAS_BB_VOUT);
+        print("BB IOUT\n");
+        read_current(MEAS_BB_IOUT);
+        print("NEG Y IOUT\n");
+        read_current(MEAS_NEG_Y_IOUT);
+        print("POS X IOUT\n");
+        read_current(MEAS_POS_X_IOUT);
+        print("POS Y IOUT\n");
+        read_current(MEAS_POS_Y_IOUT);
+        print("NEG X IOUT\n");
+        read_current(MEAS_NEG_X_IOUT);
+        print("THERM 1\n");
+        read_therm(MEAS_THERM_1);
+        print("THERM 2\n");
+        read_therm(MEAS_THERM_2);
+        print("PACK VOUT\n");
+        read_voltage(MEAS_PACK_VOUT);
+        print("PACK IOUT\n");
+        read_current(MEAS_PACK_IOUT);
+        print("BT IOUT\n");
+        read_current(MEAS_BT_IOUT);
+        print("BT VOUT\n");
+        read_voltage(MEAS_BT_VOUT);
 
         print("\n");
         _delay_ms(5000);
