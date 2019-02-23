@@ -1,6 +1,5 @@
 #include <uart/uart.h>
 #include <adc/adc.h>
-#include <adc/eps.h>
 #include <spi/spi.h>
 #include <conversions/conversions.h>
 
@@ -8,8 +7,8 @@
 #include "../../src/measurements.h"
 
 void read_voltage(uint8_t channel) {
-    fetch_channel(&adc, channel);
-    uint16_t raw_data = read_channel(&adc, channel);
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double voltage = adc_raw_vol_to_eps_vol(raw_voltage);
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Voltage: %.6f V\n",
@@ -17,8 +16,8 @@ void read_voltage(uint8_t channel) {
 }
 
 void read_current(uint8_t channel) {
-    fetch_channel(&adc, channel);
-    uint16_t raw_data = read_channel(&adc, channel);
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double current = adc_raw_vol_to_eps_cur(raw_voltage);
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Current: %.6f A\n",
@@ -26,8 +25,8 @@ void read_current(uint8_t channel) {
 }
 
 void read_therm(uint8_t channel) {
-    fetch_channel(&adc, channel);
-    uint16_t raw_data = read_channel(&adc, channel);
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double temp = adc_raw_data_to_therm_temp(raw_data);
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Temperature: %.6f C\n",

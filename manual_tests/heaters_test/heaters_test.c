@@ -3,6 +3,7 @@ Test heaters by typing in commands over UART to manually turn on and off heaters
 Also display thermistor measurements.
 */
 
+#include <adc/adc.h>
 #include <uart/uart.h>
 
 #include "../../src/devices.h"
@@ -64,7 +65,7 @@ uint8_t adc_channels_len = sizeof(adc_channels) / sizeof(adc_channels[0]);
 
 void read_thermistor_data_fn(void) {
     //Read all of the thermistors' voltage from adc
-    fetch_all(&adc);
+    fetch_all_adc_channels(&adc);
 
     print("\n");
     print("Channel, Temperature (C), Raw (12 bits), Voltage (V), Resistance (kohms)\n");
@@ -74,7 +75,7 @@ void read_thermistor_data_fn(void) {
     for (uint8_t i = 0; i < adc_channels_len; i++) {
         // Read ADC channel data
         uint8_t channel = adc_channels[i];
-        uint16_t raw_data = read_channel(&adc, channel);
+        uint16_t raw_data = read_adc_channel(&adc, channel);
 
         double voltage = adc_raw_data_to_raw_vol(raw_data);
         //Convert adc voltage to resistance of thermistor

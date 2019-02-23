@@ -163,12 +163,12 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             print("Mag Z:");
             print_imu_data(raw_data);
             break;
-        case CAN_EPS_HK_GET_DAC1:
-            print("DAC Setpoint 1:");
+        case CAN_EPS_HK_HEAT_SP1:
+            print("Heater Setpoint 1:");
             print_therm_temp(raw_data);
             break;
-        case CAN_EPS_HK_GET_DAC2:
-            print("DAC Setpoint 2:");
+        case CAN_EPS_HK_HEAT_SP2:
+            print("Heater Setpoint 2:");
             print_therm_temp(raw_data);
             break;
         default:
@@ -176,7 +176,7 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
     }
 
     uint8_t next_field_num = tx_msg[2] + 1;
-    if (next_field_num < CAN_EPS_HK_GET_COUNT) {
+    if (next_field_num < CAN_EPS_HK_FIELD_COUNT) {
         enqueue_rx_msg(CAN_EPS_HK, next_field_num);
     }
 }

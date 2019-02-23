@@ -47,8 +47,8 @@ void turn_shunts_off(void) {
 void control_shunts(void) {
     // Read battery voltage
     uint8_t channel = MEAS_PACK_VOUT;
-    fetch_channel(&adc, channel);
-    uint16_t raw_data_pos = read_channel(&adc, channel);
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data_pos = read_adc_channel(&adc, channel);
     double batt_voltage = adc_raw_data_to_eps_vol(raw_data_pos);
     print("Battery Voltage: %.6f V\n", batt_voltage);
 

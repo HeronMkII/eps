@@ -4,9 +4,7 @@
 #include <stdbool.h>
 
 #include <adc/adc.h>
-#include <adc/eps.h>
 #include <conversions/conversions.h>
-#include <pex/eps.h>
 #include <pex/pex.h>
 #include <uart/uart.h>
 
