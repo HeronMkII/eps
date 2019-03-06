@@ -15,6 +15,9 @@ void init_eps(void) {
     // PEX
     init_pex(&pex);
 
+    // DAC
+    init_dac(&dac);
+
     // Shunts
     init_shunts();
 

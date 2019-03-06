@@ -10,7 +10,7 @@ void read_voltage(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double voltage = adc_raw_vol_to_eps_vol(raw_voltage);
+    double voltage = adc_raw_data_to_eps_vol(raw_data);
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Voltage: %.6f V\n",
             channel, raw_data, raw_voltage, voltage);
 }
@@ -19,7 +19,7 @@ void read_current(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double current = adc_raw_vol_to_eps_cur(raw_voltage);
+    double current = adc_raw_data_to_eps_cur(raw_data);
     print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Current: %.6f A\n",
             channel, raw_data, raw_voltage, current);
 }
@@ -53,13 +53,13 @@ int main(void) {
         read_voltage(MEAS_BB_VOUT);
         print("BB IOUT\n");
         read_current(MEAS_BB_IOUT);
-        print("NEG Y IOUT\n");
+        print("-Y IOUT\n");
         read_current(MEAS_NEG_Y_IOUT);
-        print("POS X IOUT\n");
+        print("+X IOUT\n");
         read_current(MEAS_POS_X_IOUT);
-        print("POS Y IOUT\n");
+        print("-Y IOUT\n");
         read_current(MEAS_POS_Y_IOUT);
-        print("NEG X IOUT\n");
+        print("-X IOUT\n");
         read_current(MEAS_NEG_X_IOUT);
         print("THERM 1\n");
         read_therm(MEAS_THERM_1);

@@ -52,7 +52,7 @@ void handle_rx_hk(uint8_t* rx_msg) {
 
     // Check field number
     if ((CAN_EPS_HK_BB_VOL <= field_num) &&
-            (field_num <= CAN_EPS_HK_BAT_TEMP2)) {
+            (field_num <= CAN_EPS_HK_BT_VOL)) {
         if (sim_local_actions) {
             // use 11 bits for ADC data
             data = random() & 0x7FF;
@@ -61,12 +61,6 @@ void handle_rx_hk(uint8_t* rx_msg) {
             fetch_adc_channel(&adc, channel);
             data = read_adc_channel(&adc, channel);
         }
-    }
-
-    else if ((CAN_EPS_HK_IMU_ACC_X <= field_num) &&
-            (field_num <= CAN_EPS_HK_IMU_MAG_Z)) {
-        // TODO - get IMU data
-        data = random() & 0xFFFF;
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SP1) {
@@ -83,6 +77,12 @@ void handle_rx_hk(uint8_t* rx_msg) {
         } else {
             data = dac.raw_voltage_b;
         }
+    }
+
+    else if ((CAN_EPS_HK_IMU_ACC_X <= field_num) &&
+            (field_num <= CAN_EPS_HK_IMU_MAG_Z)) {
+        // TODO - get IMU data
+        data = random() & 0x7FFF;
     }
 
     // If the message type is not recognized, return before enqueueing

@@ -27,6 +27,10 @@ typedef struct {
 
 
 void req_eps_hk_fn(void);
+void heater_1_0c_fn(void);
+void heater_1_100c_fn(void);
+void heater_2_0c_fn(void);
+void heater_2_100c_fn(void);
 
 // All possible commands
 uart_cmd_t all_cmds[] = {
@@ -34,6 +38,22 @@ uart_cmd_t all_cmds[] = {
         .description = "Request EPS HK data",
         .fn = req_eps_hk_fn
     },
+    {
+        .description = "Set heater 1 setpoint = 0C",
+        .fn = heater_1_0c_fn
+    },
+    {
+        .description = "Set heater 1 setpoint = 100C",
+        .fn = heater_1_100c_fn
+    },
+    {
+        .description = "Set heater 2 setpoint = 0C",
+        .fn = heater_2_0c_fn
+    },
+    {
+        .description = "Set heater 2 setpoint = 100C",
+        .fn = heater_2_100c_fn
+    }
 };
 // Length of array
 const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
@@ -41,13 +61,15 @@ const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
 
 
 
-
 // Enqueues a message for EPS to receive
-void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number) {
+void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number, uint32_t raw_data) {
     uint8_t rx_msg[8] = { 0x00 };
     rx_msg[0] = 0;    // TODO
     rx_msg[1] = msg_type;
     rx_msg[2] = field_number;
+    rx_msg[3] = (raw_data >> 16) & 0xFF;
+    rx_msg[4] = (raw_data >> 8) & 0xFF;
+    rx_msg[5] = raw_data & 0xFF;
     enqueue(&can_rx_msg_queue, rx_msg);
 }
 
@@ -61,10 +83,7 @@ void print_current(uint16_t raw_data) {
 }
 
 void print_therm_temp(uint16_t raw_data) {
-    print(" 0x%.3X = %.2f C\n", raw_data,
-        therm_res_to_temp(
-        therm_vol_to_res(
-        adc_raw_data_to_raw_vol(raw_data))));
+    print(" 0x%.3X = %.2f C\n", raw_data, adc_raw_data_to_therm_temp(raw_data));
 }
 
 void print_imu_data(uint16_t raw_data) {
@@ -87,29 +106,29 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             print("BB Cur:");
             print_current(raw_data);
             break;
-        case CAN_EPS_HK_BT_VOL:
-            print("BT Vol:");
-            print_voltage(raw_data);
-            break;
-        case CAN_EPS_HK_BT_CUR:
-            print("BT Cur:");
+        case CAN_EPS_HK_NY_CUR:
+            print("-Y Cur:");
             print_current(raw_data);
             break;
         case CAN_EPS_HK_PX_CUR:
             print("+X Cur:");
             print_current(raw_data);
             break;
-        case CAN_EPS_HK_NX_CUR:
-            print("-X Cur:");
-            print_current(raw_data);
-            break;
         case CAN_EPS_HK_PY_CUR:
             print("+Y Cur:");
             print_current(raw_data);
             break;
-        case CAN_EPS_HK_NY_CUR:
-            print("-Y Cur:");
+        case CAN_EPS_HK_NX_CUR:
+            print("-X Cur:");
             print_current(raw_data);
+            break;
+        case CAN_EPS_HK_BAT_TEMP1:
+            print("Bat Temp 1:");
+            print_therm_temp(raw_data);
+            break;
+        case CAN_EPS_HK_BAT_TEMP2:
+            print("Bat Temp 2:");
+            print_therm_temp(raw_data);
             break;
         case CAN_EPS_HK_BAT_VOL:
             print("Bat Vol:");
@@ -119,12 +138,20 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             print("Bat Cur:");
             print_current(raw_data);
             break;
-        case CAN_EPS_HK_BAT_TEMP1:
-            print("Bat Temp 1:");
+        case CAN_EPS_HK_BT_CUR:
+            print("BT Cur:");
+            print_current(raw_data);
+            break;
+        case CAN_EPS_HK_BT_VOL:
+            print("BT Vol:");
+            print_voltage(raw_data);
+            break;
+        case CAN_EPS_HK_HEAT_SP1:
+            print("Heater Setpoint 1:");
             print_therm_temp(raw_data);
             break;
-        case CAN_EPS_HK_BAT_TEMP2:
-            print("Bat Temp 2:");
+        case CAN_EPS_HK_HEAT_SP2:
+            print("Heater Setpoint 2:");
             print_therm_temp(raw_data);
             break;
         case CAN_EPS_HK_IMU_ACC_X:
@@ -163,21 +190,33 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             print("Mag Z:");
             print_imu_data(raw_data);
             break;
-        case CAN_EPS_HK_HEAT_SP1:
-            print("Heater Setpoint 1:");
-            print_therm_temp(raw_data);
-            break;
-        case CAN_EPS_HK_HEAT_SP2:
-            print("Heater Setpoint 2:");
-            print_therm_temp(raw_data);
-            break;
         default:
             return;
     }
 
     uint8_t next_field_num = tx_msg[2] + 1;
     if (next_field_num < CAN_EPS_HK_FIELD_COUNT) {
-        enqueue_rx_msg(CAN_EPS_HK, next_field_num);
+        enqueue_rx_msg(CAN_EPS_HK, next_field_num, 0);
+    }
+}
+
+
+void process_eps_ctrl_tx_msg(uint8_t* tx_msg) {
+    uint8_t field_num = tx_msg[2];
+    // uint32_t raw_data =
+    //     (((uint32_t) tx_msg[3]) << 16) |
+    //     (((uint32_t) tx_msg[4]) << 8) |
+    //     ((uint32_t) tx_msg[5]);
+
+    switch (field_num) {
+        case CAN_EPS_CTRL_HEAT_SP1:
+            print("Set heater setpoint 1\n");
+            break;
+        case CAN_EPS_CTRL_HEAT_SP2:
+            print("Set heater setpoint 2\n");
+            break;
+        default:
+            break;
     }
 }
 
@@ -196,6 +235,8 @@ void sim_send_next_tx_msg(void) {
         case CAN_EPS_HK:
             process_eps_hk_tx_msg(tx_msg);
             break;
+        case CAN_EPS_CTRL:
+            process_eps_ctrl_tx_msg(tx_msg);
         default:
             return;
     }
@@ -239,8 +280,37 @@ void print_next_rx_msg(void) {
 
 
 void req_eps_hk_fn(void) {
-    enqueue_rx_msg(CAN_EPS_HK, 0);
+    enqueue_rx_msg(CAN_EPS_HK, 0, 0);
 }
+
+void heater_1_0c_fn(void) {
+    double res = therm_temp_to_res(0);
+    double vol = therm_res_to_vol(res);
+    uint16_t raw_data = dac_vol_to_raw_data(vol);
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP1, raw_data);
+}
+
+void heater_1_100c_fn(void) {
+    double res = therm_temp_to_res(100);
+    double vol = therm_res_to_vol(res);
+    uint16_t raw_data = dac_vol_to_raw_data(vol);
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP1, raw_data);
+}
+
+void heater_2_0c_fn(void) {
+    double res = therm_temp_to_res(0);
+    double vol = therm_res_to_vol(res);
+    uint16_t raw_data = dac_vol_to_raw_data(vol);
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP2, raw_data);
+}
+
+void heater_2_100c_fn(void) {
+    double res = therm_temp_to_res(100);
+    double vol = therm_res_to_vol(res);
+    uint16_t raw_data = dac_vol_to_raw_data(vol);
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP2, raw_data);
+}
+
 
 
 

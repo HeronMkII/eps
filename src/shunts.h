@@ -12,7 +12,6 @@
 #include "measurements.h"
 
 
-
 // Shunt pins on PEX GPIOA (all on bank A)
 // For battery charging (solar panel faces)
 #define SHUNTS_POS_X 0   // +X face
