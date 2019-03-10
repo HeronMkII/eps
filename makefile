@@ -186,4 +186,4 @@ endif
 
 # Upload program to board
 upload: $(PROG)
-	avrdude -c $(PGMR) -p $(DEVICE) -P $(PORT) -U flash:w:./build/$^.hex
+	avrdude -c $(PGMR) -C ./lib-common/avrdude.conf -p $(DEVICE) -P $(PORT) -U flash:w:./build/$^.hex
