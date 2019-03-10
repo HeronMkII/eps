@@ -354,7 +354,7 @@ int main(void) {
     print("\n\n\nStarting commands test\n\n");
 
     // Change these as necessary for testing
-    sim_local_actions = true;
+    sim_local_actions = false;
     sim_obc = true;
     print_can_msgs = true;
 
@@ -367,15 +367,19 @@ int main(void) {
     set_uart_rx_cb(uart_cb);
 
     while(1) {
-        print_next_tx_msg();
-        if (sim_obc) {
-            sim_send_next_tx_msg();
-        } else {
-            send_next_tx_msg();
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            print_next_tx_msg();
+            if (sim_obc) {
+                sim_send_next_tx_msg();
+            } else {
+                send_next_tx_msg();
+            }
         }
 
-        print_next_rx_msg();
-        process_next_rx_msg();
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            print_next_rx_msg();
+            process_next_rx_msg();
+        }
     }
 
     return 0;
