@@ -24,7 +24,7 @@
 #define SHUNTS_ON_THRESHOLD 4.0
 // If the battery output voltage goes below this threshold,
 // the shunts should be turned off (battery charging on)
-#define SHUNTS_OFF_THRESHOLD 3.0
+#define SHUNTS_OFF_THRESHOLD 3.8
 
 extern bool are_shunts_on;
 
