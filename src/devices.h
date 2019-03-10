@@ -21,18 +21,17 @@
 #define DAC_CLR_DDR  DDRC
 
 // PEX CS
-#define PEX_CS_PIN  PB5
-#define PEX_CS_PORT PORTB
-#define PEX_CS_DDR  DDRB
+#define PEX_CS_PIN  PC1
+#define PEX_CS_PORT PORTC
+#define PEX_CS_DDR  DDRC
 
 // PEX RST
-#define PEX_RST_PIN  PB4
-#define PEX_RST_PORT PORTB
-#define PEX_RST_DDR  DDRB
+#define PEX_RST_PIN  PD1
+#define PEX_RST_PORT PORTD
+#define PEX_RST_DDR  DDRD
 
 // PEX address
-// TODO
-#define PEX_ADDR 0
+#define PEX_ADDR 0b001
 
 extern adc_t adc;
 extern pex_t pex;
