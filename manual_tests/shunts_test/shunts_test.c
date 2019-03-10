@@ -41,11 +41,18 @@ int main(void) {
     init_uart();
     print("\n\nUART initialized\n");
 
+    // Set the IMU CSn (PD0) high (because it doesn't have a pullup resistor)
+    // so it doesn't interfere with the PEX's output on the MISO line
+    init_cs(PD0, &DDRD);
+    set_cs_high(PD0, &PORTD);
+
     init_spi();
     print("SPI Initialized\n");
 
     init_shunts();
     print("Shunts Initialized\n");
+
+    print("-Y = A3, +Y = A2, -X = A1, +X = A0\n");
 
     print("\nStarting test\n\n");
     print_cmds();
@@ -54,5 +61,15 @@ int main(void) {
     set_uart_rx_cb(uart_cb);
 
     // Loop forever, the UART callback will interrupt
-    while(1) {}
+    while(1) {
+        // Read battery voltage
+        uint8_t channel = MEAS_PACK_VOUT;
+        fetch_adc_channel(&adc, channel);
+        uint16_t raw_data = read_adc_channel(&adc, channel);
+        double batt_voltage = adc_raw_data_to_eps_vol(raw_data);
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            print("Battery Voltage: %.6f V\n", batt_voltage);
+        }
+        _delay_ms(1000);
+    }
 }

@@ -26,7 +26,7 @@ void set_heater_2_raw_setpoint(uint16_t raw_data) {
 }
 
 // temp - in C
-void set_heater_1_setpoint_temp(double temp) {
+void set_heater_1_temp_setpoint(double temp) {
     double res = therm_temp_to_res(temp);
     double vol = therm_res_to_vol(res);
     uint16_t raw_data = dac_vol_to_raw_data(vol);
@@ -34,7 +34,7 @@ void set_heater_1_setpoint_temp(double temp) {
 }
 
 // temp - in C
-void set_heater_2_setpoint_temp(double temp) {
+void set_heater_2_temp_setpoint(double temp) {
     double res = therm_temp_to_res(temp);
     double vol = therm_res_to_vol(res);
     uint16_t raw_data = dac_vol_to_raw_data(vol);

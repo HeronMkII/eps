@@ -17,8 +17,10 @@ void init_shunts(void) {
     set_pex_pin_dir(&pex, PEX_A, SHUNTS_POS_Y, OUTPUT);
     set_pex_pin_dir(&pex, PEX_A, SHUNTS_NEG_Y, OUTPUT);
 
+    // Make sure the ADC is initialized for battery voltage measurements
     init_adc(&adc);
 
+    // Turn shunts off (battery charging on) by default
     turn_shunts_off();
 }
 
@@ -47,19 +49,15 @@ void turn_shunts_off(void) {
 void control_shunts(void) {
     // Read battery voltage
     uint8_t channel = MEAS_PACK_VOUT;
-    fetch_channel(&adc, channel);
-    uint16_t raw_data_pos = read_channel(&adc, channel);
-    double batt_voltage = adc_raw_data_to_eps_vol(raw_data_pos);
-    print("Battery Voltage: %.6f V\n", batt_voltage);
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double batt_voltage = adc_raw_data_to_eps_vol(raw_data);
 
+    // TODO - figure out thresholds
     // Decide whether to switch the shunts on, off, or stay the same
     if (!are_shunts_on && batt_voltage > SHUNTS_ON_THRESHOLD) {
         turn_shunts_on();
-        print("Shunts on\n");
     } else if (are_shunts_on && batt_voltage < SHUNTS_OFF_THRESHOLD) {
         turn_shunts_off();
-        print("Shunts off\n");
-    } else {
-        // No change in shunts
     }
 }

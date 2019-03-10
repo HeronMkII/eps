@@ -6,6 +6,12 @@ void init_eps(void) {
     // UART
     init_uart();
 
+    // TODO - remove and call init_imu()
+    // Set the IMU CSn (PD0) high (because it doesn't have a pullup resistor)
+    // so it doesn't interfere with the MOSI/MISO lines
+    init_cs(PD0, &DDRD);
+    set_cs_high(PD0, &PORTD);
+
     // SPI
     init_spi();
 
@@ -14,6 +20,9 @@ void init_eps(void) {
 
     // PEX
     init_pex(&pex);
+
+    // DAC
+    init_dac(&dac);
 
     // Shunts
     init_shunts();

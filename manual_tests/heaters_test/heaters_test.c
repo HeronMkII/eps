@@ -3,6 +3,7 @@ Test heaters by typing in commands over UART to manually turn on and off heaters
 Also display thermistor measurements.
 */
 
+#include <adc/adc.h>
 #include <uart/uart.h>
 
 #include "../../src/devices.h"
@@ -63,49 +64,47 @@ uint8_t adc_channels_len = sizeof(adc_channels) / sizeof(adc_channels[0]);
 
 
 void read_thermistor_data_fn(void) {
-    //Read all of the thermistors' voltage from adc
-    fetch_all(&adc);
-
     print("\n");
-    print("Channel, Temperature (C), Raw (12 bits), Voltage (V), Resistance (kohms)\n");
+    print("Channel, Raw (12 bits), Voltage (V), Resistance (kohms), Temperature (C)\n");
 
     //Find resistance for each channel
     //only calculate it for the thermistors specified in adc_channels
     for (uint8_t i = 0; i < adc_channels_len; i++) {
         // Read ADC channel data
         uint8_t channel = adc_channels[i];
-        uint16_t raw_data = read_channel(&adc, channel);
+        fetch_adc_channel(&adc, channel);
+        uint16_t raw_data = read_adc_channel(&adc, channel);
 
         double voltage = adc_raw_data_to_raw_vol(raw_data);
         //Convert adc voltage to resistance of thermistor
         double resistance = therm_vol_to_res(voltage);
         //Convert resistance to temperature of thermistor
-        double temperature = therm_res_to_temp(resistance);
+        double temperature = adc_raw_data_to_therm_temp(raw_data);
 
-        print("%u: %.3f, 0x%.3X, %.3f, %.3f\n", channel, temperature, raw_data, voltage, resistance);
+        print("%u: 0x%.3X, %.3f, %.3f, %.3f\n", channel, raw_data, voltage, resistance, temperature);
     }
 }
 
 void turn_heater_1_on_fn(void) {
-    set_heater_1_setpoint_temp(100);
+    set_heater_1_temp_setpoint(100);
     print("Set heater 1 setpoint (DAC A) = 100 C\n");
     print("Heater 1 should be ON\n");
 }
 
 void turn_heater_1_off_fn(void) {
-    set_heater_1_setpoint_temp(0);
+    set_heater_1_temp_setpoint(0);
     print("Set heater 1 setpoint (DAC A) = 0 C\n");
     print("Heater 1 should be OFF\n");
 }
 
 void turn_heater_2_on_fn(void) {
-    set_heater_2_setpoint_temp(100);
+    set_heater_2_temp_setpoint(100);
     print("Set heater 2 setpoint (DAC B) = 100 C\n");
     print("Heater 2 should be ON\n");
 }
 
 void turn_heater_2_off_fn(void) {
-    set_heater_2_setpoint_temp(0);
+    set_heater_2_temp_setpoint(0);
     print("Set heater 2 setpoint (DAC B) = 0 C\n");
     print("Heater 2 should be OFF\n");
 }
@@ -151,6 +150,12 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
 
 int main(void) {
     init_uart();
+
+    // Set the IMU CSn (PD0) high (because it doesn't have a pullup resistor)
+    // so it doesn't interfere with MISO line
+    init_cs(PD0, &DDRD);
+    set_cs_high(PD0, &PORTD);
+
     init_spi();
     init_dac(&dac);
     init_adc(&adc);
