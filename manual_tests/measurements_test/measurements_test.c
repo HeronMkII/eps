@@ -6,31 +6,31 @@
 #include "../../src/devices.h"
 #include "../../src/measurements.h"
 
-void read_voltage(uint8_t channel) {
+void read_voltage(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double voltage = adc_raw_data_to_eps_vol(raw_data);
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Voltage: %.6f V\n",
-            channel, raw_data, raw_voltage, voltage);
+    print("%s, %u, 0x%04x, %.6f V, %.6f V\n",
+            name, channel, raw_data, raw_voltage, voltage);
 }
 
-void read_current(uint8_t channel) {
+void read_current(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double current = adc_raw_data_to_eps_cur(raw_data);
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Current: %.6f A\n",
-            channel, raw_data, raw_voltage, current);
+    print("%s, %u, 0x%04x, %.6f V, %.6f A\n",
+            name, channel, raw_data, raw_voltage, current);
 }
 
-void read_therm(uint8_t channel) {
+void read_therm(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
     double temp = adc_raw_data_to_therm_temp(raw_data);
-    print("Channel: %u, Raw Data: 0x%04x, Raw Voltage: %.6f V, Temperature: %.6f C\n",
-            channel, raw_data, raw_voltage, temp);
+    print("%s, %u, 0x%04x, %.6f V, %.6f C\n",
+            name, channel, raw_data, raw_voltage, temp);
 }
 
 
@@ -39,6 +39,11 @@ void read_therm(uint8_t channel) {
 int main(void) {
     init_uart();
     print("\n\nUART initialized\n");
+
+    // Set the IMU CSn (PD0) high (because it doesn't have a pullup resistor)
+    // so it doesn't interfere with the ADC's output on the MISO line
+    init_cs(PD0, &DDRD);
+    set_cs_high(PD0, &PORTD);
 
     init_spi();
     print("SPI Initialized\n");
@@ -49,30 +54,19 @@ int main(void) {
     print("\nStarting test\n\n");
 
     while(1) {
-        print("BB VOUT\n");
-        read_voltage(MEAS_BB_VOUT);
-        print("BB IOUT\n");
-        read_current(MEAS_BB_IOUT);
-        print("-Y IOUT\n");
-        read_current(MEAS_NEG_Y_IOUT);
-        print("+X IOUT\n");
-        read_current(MEAS_POS_X_IOUT);
-        print("-Y IOUT\n");
-        read_current(MEAS_POS_Y_IOUT);
-        print("-X IOUT\n");
-        read_current(MEAS_NEG_X_IOUT);
-        print("THERM 1\n");
-        read_therm(MEAS_THERM_1);
-        print("THERM 2\n");
-        read_therm(MEAS_THERM_2);
-        print("PACK VOUT\n");
-        read_voltage(MEAS_PACK_VOUT);
-        print("PACK IOUT\n");
-        read_current(MEAS_PACK_IOUT);
-        print("BT IOUT\n");
-        read_current(MEAS_BT_IOUT);
-        print("BT VOUT\n");
-        read_voltage(MEAS_BT_VOUT);
+        print("Name, Channel, Raw Data, Raw Voltage, Converted Data\n");
+        read_voltage("BB VOUT", MEAS_BB_VOUT);
+        read_current("BB IOUT", MEAS_BB_IOUT);
+        read_current("-Y IOUT", MEAS_NEG_Y_IOUT);
+        read_current("+X IOUT", MEAS_POS_X_IOUT);
+        read_current("-Y IOUT", MEAS_POS_Y_IOUT);
+        read_current("-X IOUT", MEAS_NEG_X_IOUT);
+        read_therm("THERM 1", MEAS_THERM_1);
+        read_therm("THERM 2", MEAS_THERM_2);
+        read_voltage("PACK VOUT", MEAS_PACK_VOUT);
+        read_current("PACK IOUT", MEAS_PACK_IOUT);
+        read_current("BT IOUT", MEAS_BT_IOUT);
+        read_voltage("BT VOUT", MEAS_BT_VOUT);
 
         print("\n");
         _delay_ms(5000);
