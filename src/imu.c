@@ -95,7 +95,7 @@ pin_info_t imu_rst = {
     .pin = PB3
 };
 
-// CS
+// CSn
 pin_info_t imu_cs = {
     .ddr = &DDRD,
     .port = &PORTD,
@@ -120,18 +120,23 @@ uint8_t imu_seq_nums[6] = { 0 };
 Initializes the IMU (#0 p. 43).
 */
 void init_imu(void) {
-    init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
-    init_input_pin(imu_int.pin, imu_int.ddr);
-    // The protocol selection and boot pins are sampled at reset, so we need to
-    // set PS0 = 1 before reset
+    // The protocol selection and boot pins are sampled during startup, so we
+    // need to set them before reset
+
+    // CLKSEL0 = 0 (for crystal, #0 p.11)
+    init_output_pin(imu_clksel0.pin, imu_clksel0.ddr, 0);
+    // BOOTn = 1 (not bootloader mode, #0 p.9)
+    init_output_pin(imu_boot.pin, imu_boot.ddr, 1);
+    // PS0 = 1 (#0 p.9) - PS1 = 1 already in hardware
     init_output_pin(imu_ps0_wake.pin, imu_ps0_wake.ddr, 1);
-    init_cs(imu_ps0_wake.pin, imu_ps0_wake.ddr);
+    // RSTn = 1 (#0 p.10)
+    init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
+    // CSn = 1
+    init_cs(imu_cs.pin, imu_cs.ddr);
+    // Interrupt input
+    init_input_pin(imu_int.pin, imu_int.ddr);
 
-
-
-
-    // Enabling interrupts...
-
+    // Enable interrupts
     // set behaviour of INT2 to trigger on falling edge (p.84)
     EICRA |= _BV(ISC21);
     EICRA &= ~_BV(ISC20);
@@ -140,68 +145,66 @@ void init_imu(void) {
     // enable global interrupts
     sei();
 
-
-
-
+    // Reset with the appropriate GPIO pin settings
+    print("Resetting IMU...\n");
     reset_imu();
+    print("Done reset\n");
+    // TODO
+    _delay_ms(200);
 
-    // INT is asserted after reset (#0 p. 43)
+    // Wait for INT to be asserted after reset (#0 p. 43)
     wait_for_imu_int();
+    // _delay_ms(200);
 
-    // "A read from the BNO080 will return the initial SHTP advertisement packet"
+    // "A read from the BNO080 will return the initial SHTP advertisement
+    // packet" (#0 p.43)
+    // "On system startup, the SHTP control application will send its
+    // full advertisement response, unsolicited, to the host." (#2 p.16)
+    receive_and_discard_imu_packet();
+    // _delay_ms(200);
 
-    // TODO - on channel 0
+    // Initialize response
+    // "An unsolicited response is also generated after startup." (#1 p.48)
+    receive_and_discard_imu_packet();
+    // _delay_ms(200);
+
+    receive_and_discard_imu_packet();
+    // _delay_ms(200);
+
+    receive_and_discard_imu_packet();
+    receive_and_discard_imu_packet();
+    receive_and_discard_imu_packet();
+
     // TODO - in SPI library, log all sent and received bytes
-
-    // TODO - add packet header stuff (e.g. length)
-
-    start_imu_spi();
-    // 2 bytes cargo, channel 0
-    send_imu_shtp_header(2, 0);
-    // "Command 0 is the advertise command." (#2 p. 15)
-    send_spi(0x00);
-    // Parameter 0 - 0 for just SHTP (#2 p. 15)
-    send_spi(0x00);
-    end_imu_spi();
-
-    // "Response 0 is the advertise response." (#2 p. 16)
-    // TODO - "On system startup, the SHTP control application will send its
-    // full advertisement response, unsolicited, to the host." ???
-    // TODO - Do we not need to send the command before?
-
-    wait_for_imu_int();
-
-    uint16_t length = 0;
-    uint8_t channel = 0;
-
-    start_imu_spi();
-    receive_imu_shtp_header(&length, &channel);
-    print("length = %u, channel = %u\n", length, channel);
-    print("Received SPI:");
-    for (uint16_t i = 0; i < length; i++) {
-        uint8_t data = send_spi(0x00);
-        print(" %02X", data);
-    }
-    print("\n");
-    end_imu_spi();
 }
 
 void reset_imu(void) {
     // Assert then deassert active low reset
     // TODO - what delay time?
     set_pin_low(imu_rst.pin, imu_rst.port);
-    _delay_us(1);
-    set_pin_low(imu_rst.pin, imu_rst.port);
+    _delay_ms(10);
+    set_pin_high(imu_rst.pin, imu_rst.port);
 }
 
 /*
 Waits until the interrupt pin goes low.
 TODO - return timeout and success value
 TODO - how long does this take?
+Returns - 1 for success (got INT), 0 for failure (no INT)
 */
-void wait_for_imu_int(void) {
-    uint16_t timeout;
-    for (timeout = UINT16_MAX; get_pin_val(imu_int.pin, imu_int.port) != 0 && timeout > 0; timeout--) {}
+uint8_t wait_for_imu_int(void) {
+    uint16_t timeout = UINT16_MAX;
+    while (get_pin_val(imu_int.pin, imu_int.port) != 0 && timeout > 0) {
+        timeout--;
+    }
+
+    if (timeout == 0) {
+        print("Failed INT\n");
+        return 0;
+    }
+
+    print("Successful INT\n");
+    return 1;
 }
 
 void start_imu_spi(void) {
@@ -218,10 +221,11 @@ void end_imu_spi(void) {
 Sends the 4-byte SHTP header and increments the sequence number (#2 p. 4).
 length - should NOT include the header length (this function will add the header length)
 */
-void send_imu_shtp_header(uint16_t length, uint8_t channel) {
+void send_imu_header(uint16_t length, uint8_t channel) {
     // Add this header length (should be length of cargo + header)
     length += 4;
 
+    // LSB first for length
     send_spi(length & 0xFF);
     send_spi((length >> 8) & 0xFF);
     send_spi(channel);
@@ -235,19 +239,54 @@ void send_imu_shtp_header(uint16_t length, uint8_t channel) {
 Receives the 4-byte SHTP header and increments the sequence number (#2 p. 4).
 length - will NOT include the header length (this function will subtract the header length)
 */
-void receive_imu_shtp_header(uint16_t *length, uint8_t *channel) {
+void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num) {
     // Add this header length (should be length of cargo + header)
+    // Note LSB first
     uint8_t length_lsb = send_spi(0x00);
     uint8_t length_msb = send_spi(0x00);
     *channel = send_spi(0x00);
     // TODO - check if seq_num is correct
-    send_spi(0x00);
+    *seq_num = send_spi(0x00);
 
+    // Concatenate length
     *length = (((uint16_t) length_msb) << 8) | ((uint16_t) length_lsb);
+    // Just in case of a malfunction, make length at least 4
+    if (*length < 4) {
+        *length = 4;
+    }
+    // MSB (bit 15) is used to indicate if the transfer is a continuation of the
+    // previous transfer (not applicable for us)
+    *length &= ~_BV(15);
+    // Subtract 4 bytes of header
     *length -= 4;
 
     // Increment the sequence number for that channel
     imu_seq_nums[*channel]++;
+}
+
+uint8_t receive_and_discard_imu_packet(void) {
+    if (!wait_for_imu_int()) {
+        return 0;
+    }
+
+    uint16_t length = 0;
+    uint8_t channel = 0;
+    uint8_t seq_num = 0;
+
+    start_imu_spi();
+    receive_imu_header(&length, &channel, &seq_num);
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        print("Received header: length = %u, channel = %u, seq_num = %u\n", length, channel, seq_num);
+    }
+    print("Received SPI:");
+    for (uint16_t i = 0; i < length; i++) {
+        uint8_t data = send_spi(0x00);
+        // print(" %02X", data);
+        // put_uart_char(' ');
+        put_uart_char(data);
+    }
+    print("\n");
+    end_imu_spi();
 }
 
 // INT2 interrupt from INTn pin
