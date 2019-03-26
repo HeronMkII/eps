@@ -23,8 +23,10 @@ typedef struct {
 void read_thermistor_data_fn(void);
 void turn_heater_1_on_fn(void);
 void turn_heater_1_off_fn(void);
+void set_heater_1_mid_fn(void);
 void turn_heater_2_on_fn(void);
 void turn_heater_2_off_fn(void);
+void set_heater_2_mid_fn(void);
 
 
 // All possible commands
@@ -42,12 +44,20 @@ uart_cmd_t all_cmds[] = {
         .fn = turn_heater_1_off_fn
     },
     {
+        .description = "Set heater 1 middle setpoint",
+        .fn = set_heater_1_mid_fn
+    },
+    {
         .description = "Turn heater 2 on",
         .fn = turn_heater_2_on_fn
     },
     {
         .description = "Turn heater 2 off",
         .fn = turn_heater_2_off_fn
+    },
+    {
+        .description = "Set heater 2 middle setpoint",
+        .fn = set_heater_2_mid_fn
     }
 };
 // Length of array
@@ -97,6 +107,11 @@ void turn_heater_1_off_fn(void) {
     print("Heater 1 should be OFF\n");
 }
 
+void set_heater_1_mid_fn(void) {
+    set_heater_1_temp_setpoint(28);
+    print("Set heater 1 setpoint (DAC A) = 28 C\n");
+}
+
 void turn_heater_2_on_fn(void) {
     set_heater_2_temp_setpoint(100);
     print("Set heater 2 setpoint (DAC B) = 100 C\n");
@@ -109,6 +124,10 @@ void turn_heater_2_off_fn(void) {
     print("Heater 2 should be OFF\n");
 }
 
+void set_heater_2_mid_fn(void) {
+    set_heater_2_temp_setpoint(28);
+    print("Set heater 2 setpoint (DAC B) = 28 C\n");
+}
 
 
 
