@@ -23,6 +23,7 @@ typedef struct {
 } uart_cmd_t;
 
 void read_thermistor_data_fn(void);
+void print_setpoints_fn(void);
 void set_heater_1_arbitrary_fn(void);
 void set_heater_2_arbitrary_fn(void);
 void turn_heater_1_on_fn(void);
@@ -33,8 +34,7 @@ void turn_heater_2_off_fn(void);
 void set_heater_2_mid_fn(void);
 
 volatile bool entering_num = false;
-volatile bool entered_num_valid = false;
-volatile double entered_num = 0;
+volatile uint8_t entering_num_heater = 0;   // 1 or 2
 
 
 // All possible commands
@@ -44,37 +44,41 @@ uart_cmd_t all_cmds[] = {
         .fn = read_thermistor_data_fn
     },
     {
+        .description = "Print setpoints",
+        .fn = print_setpoints_fn
+    },
+    {
         .description = "Set heater 1 arbitrary setpoint",
         .fn = set_heater_1_arbitrary_fn
     },
     {
         .description = "Set heater 2 arbitrary setpoint",
         .fn = set_heater_2_arbitrary_fn
-    },
-    {
-        .description = "Turn heater 1 on",
-        .fn = turn_heater_1_on_fn
-    },
-    {
-        .description = "Turn heater 1 off",
-        .fn = turn_heater_1_off_fn
-    },
-    {
-        .description = "Set heater 1 middle setpoint",
-        .fn = set_heater_1_mid_fn
-    },
-    {
-        .description = "Turn heater 2 on",
-        .fn = turn_heater_2_on_fn
-    },
-    {
-        .description = "Turn heater 2 off",
-        .fn = turn_heater_2_off_fn
-    },
-    {
-        .description = "Set heater 2 middle setpoint",
-        .fn = set_heater_2_mid_fn
     }
+    // {
+    //     .description = "Turn heater 1 on",
+    //     .fn = turn_heater_1_on_fn
+    // },
+    // {
+    //     .description = "Turn heater 1 off",
+    //     .fn = turn_heater_1_off_fn
+    // },
+    // {
+    //     .description = "Set heater 1 middle setpoint",
+    //     .fn = set_heater_1_mid_fn
+    // },
+    // {
+    //     .description = "Turn heater 2 on",
+    //     .fn = turn_heater_2_on_fn
+    // },
+    // {
+    //     .description = "Turn heater 2 off",
+    //     .fn = turn_heater_2_off_fn
+    // },
+    // {
+    //     .description = "Set heater 2 middle setpoint",
+    //     .fn = set_heater_2_mid_fn
+    // }
 };
 // Length of array
 const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
@@ -99,45 +103,58 @@ void set_heater_2(double temp) {
 
 
 void read_thermistor_data_fn(void) {
-    print("\n");
-    print("Channel, Raw (12 bits), Voltage (V), Resistance (kohms), Temperature (C)\n");
+    // print("\n");
+    // print("Channel, Raw (12 bits), Voltage (V), Resistance (kohms), Temperature (C)\n");
+    //
+    // //Find resistance for each channel
+    // //only calculate it for the thermistors specified in adc_channels
+    // for (uint8_t i = 0; i < adc_channels_len; i++) {
+    //     // Read ADC channel data
+    //     uint8_t channel = adc_channels[i];
+    //     fetch_adc_channel(&adc, channel);
+    //     uint16_t raw_data = read_adc_channel(&adc, channel);
+    //
+    //     double voltage = adc_raw_data_to_raw_vol(raw_data);
+    //     //Convert adc voltage to resistance of thermistor
+    //     double resistance = therm_vol_to_res(voltage);
+    //     //Convert resistance to temperature of thermistor
+    //     double temperature = adc_raw_data_to_therm_temp(raw_data);
+    //
+    //     print("%u: 0x%.3X, %.3f, %.3f, %.3f\n", channel, raw_data, voltage, resistance, temperature);
+    // }
 
-    //Find resistance for each channel
-    //only calculate it for the thermistors specified in adc_channels
-    for (uint8_t i = 0; i < adc_channels_len; i++) {
-        // Read ADC channel data
-        uint8_t channel = adc_channels[i];
-        fetch_adc_channel(&adc, channel);
-        uint16_t raw_data = read_adc_channel(&adc, channel);
+    uint16_t raw_data;
+    double temperature;
 
-        double voltage = adc_raw_data_to_raw_vol(raw_data);
-        //Convert adc voltage to resistance of thermistor
-        double resistance = therm_vol_to_res(voltage);
-        //Convert resistance to temperature of thermistor
-        double temperature = adc_raw_data_to_therm_temp(raw_data);
+    print("Thermistor Temperatures:\n");
 
-        print("%u: 0x%.3X, %.3f, %.3f, %.3f\n", channel, raw_data, voltage, resistance, temperature);
-    }
+    fetch_adc_channel(&adc, MEAS_THERM_1);
+    raw_data = read_adc_channel(&adc, MEAS_THERM_1);
+    temperature = adc_raw_data_to_therm_temp(raw_data);
+    print("Thermistor 1: %.3f C\n", temperature);
+
+    fetch_adc_channel(&adc, MEAS_THERM_2);
+    raw_data = read_adc_channel(&adc, MEAS_THERM_2);
+    temperature = adc_raw_data_to_therm_temp(raw_data);
+    print("Thermistor 2: %.3f C\n", temperature);
+}
+
+void print_setpoints_fn(void) {
+    print("Heater Setpoints:\n");
+    print("Heater 1 (DAC A): %.1f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_a))));
+    print("Heater 2 (DAC B): %.1f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_b))));
 }
 
 void set_heater_1_arbitrary_fn(void) {
     print("Enter a number of the format ##.#\n");
+    entering_num_heater = 1;
     entering_num = true;
-    while (entering_num) {}
-    if (entered_num_valid) {
-        set_heater_1(entered_num);
-    }
-    entered_num_valid = false;
 }
 
 void set_heater_2_arbitrary_fn(void) {
     print("Enter a number of the format ##.#\n");
+    entering_num_heater = 2;
     entering_num = true;
-    while (entering_num) {}
-    if (entered_num_valid) {
-        set_heater_2(entered_num);
-    }
-    entered_num_valid = false;
 }
 
 void turn_heater_1_on_fn(void) {
@@ -194,29 +211,37 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
         return 0;
     }
 
+    // Print the typed character
+    put_uart_char(data[len - 1]);
+
     if (entering_num) {
         if (len < 4) {
             return 0;
         }
+        put_uart_char('\n');
+
         entering_num = false;
-        if (is_num(data[0]) && is_num(data[1]) && data[2] == '.' && is_num(data[3])) {
-            entered_num =
-                (10.0 * char_to_num(data[0])) +
-                (1.0 * char_to_num(data[1])) +
-                (0.1 * char_to_num(data[3]));
-            entered_num_valid = true;
-            print("Got number %.1f\n", entered_num);
-        } else {
-            entered_num = 0.0;
-            entered_num_valid = false;
+
+        if (!(is_num(data[0]) && is_num(data[1]) && data[2] == '.' && is_num(data[3]))) {
             print("Invalid number, must be of the form ##.#\n");
+            return len;
+        }
+
+        double entered_num =
+            (10.0 * char_to_num(data[0])) +
+            (1.0 * char_to_num(data[1])) +
+            (0.1 * char_to_num(data[3]));
+
+        if (entering_num_heater == 1) {
+            set_heater_1(entered_num);
+        } else if (entering_num_heater == 2) {
+            set_heater_2(entered_num);
         }
 
         return len;
     }
 
-    // Print the typed character
-    print("%c\n", data[0]);
+    put_uart_char('\n');
 
     // Check for printing the help menu
     if (data[0] == 'h') {
@@ -228,7 +253,6 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
         // Enqueue the selected command
         uint8_t i = data[0] - '0';
         all_cmds[i].fn();
-        print_cmds();
     }
 
     else {
