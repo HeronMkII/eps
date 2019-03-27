@@ -141,8 +141,8 @@ void read_thermistor_data_fn(void) {
 
 void print_setpoints_fn(void) {
     print("Heater Setpoints:\n");
-    print("Heater 1 (DAC A): %.1f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_a))));
-    print("Heater 2 (DAC B): %.1f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_b))));
+    print("Heater 1: %.3f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_a))));
+    print("Heater 2: %.3f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_b))));
 }
 
 void set_heater_1_arbitrary_fn(void) {
