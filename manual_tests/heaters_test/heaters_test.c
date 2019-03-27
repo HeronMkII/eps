@@ -3,6 +3,8 @@ Test heaters by typing in commands over UART to manually turn on and off heaters
 Also display thermistor measurements.
 */
 
+#include <stdbool.h>
+
 #include <adc/adc.h>
 #include <uart/uart.h>
 
@@ -21,6 +23,8 @@ typedef struct {
 } uart_cmd_t;
 
 void read_thermistor_data_fn(void);
+void set_heater_1_arbitrary_fn(void);
+void set_heater_2_arbitrary_fn(void);
 void turn_heater_1_on_fn(void);
 void turn_heater_1_off_fn(void);
 void set_heater_1_mid_fn(void);
@@ -28,12 +32,24 @@ void turn_heater_2_on_fn(void);
 void turn_heater_2_off_fn(void);
 void set_heater_2_mid_fn(void);
 
+volatile bool entering_num = false;
+volatile bool entered_num_valid = false;
+volatile double entered_num = 0;
+
 
 // All possible commands
 uart_cmd_t all_cmds[] = {
     {
         .description = "Read thermistor data",
         .fn = read_thermistor_data_fn
+    },
+    {
+        .description = "Set heater 1 arbitrary setpoint",
+        .fn = set_heater_1_arbitrary_fn
+    },
+    {
+        .description = "Set heater 2 arbitrary setpoint",
+        .fn = set_heater_2_arbitrary_fn
     },
     {
         .description = "Turn heater 1 on",
@@ -71,6 +87,15 @@ uint8_t adc_channels[] = { MEAS_THERM_1, MEAS_THERM_2 };
 uint8_t adc_channels_len = sizeof(adc_channels) / sizeof(adc_channels[0]);
 
 
+void set_heater_1(double temp) {
+    set_heater_1_temp_setpoint(temp);
+    print("Set heater 1 setpoint (DAC A) = %.1f C\n", temp);
+}
+
+void set_heater_2(double temp) {
+    set_heater_2_temp_setpoint(temp);
+    print("Set heater 2 setpoint (DAC B) = %.1f C\n", temp);
+}
 
 
 void read_thermistor_data_fn(void) {
@@ -95,38 +120,52 @@ void read_thermistor_data_fn(void) {
     }
 }
 
+void set_heater_1_arbitrary_fn(void) {
+    print("Enter a number of the format ##.#\n");
+    entering_num = true;
+    while (entering_num) {}
+    if (entered_num_valid) {
+        set_heater_1(entered_num);
+    }
+    entered_num_valid = false;
+}
+
+void set_heater_2_arbitrary_fn(void) {
+    print("Enter a number of the format ##.#\n");
+    entering_num = true;
+    while (entering_num) {}
+    if (entered_num_valid) {
+        set_heater_2(entered_num);
+    }
+    entered_num_valid = false;
+}
+
 void turn_heater_1_on_fn(void) {
-    set_heater_1_temp_setpoint(100);
-    print("Set heater 1 setpoint (DAC A) = 100 C\n");
+    set_heater_1(100);
     print("Heater 1 should be ON\n");
 }
 
 void turn_heater_1_off_fn(void) {
-    set_heater_1_temp_setpoint(0);
-    print("Set heater 1 setpoint (DAC A) = 0 C\n");
+    set_heater_1(0);
     print("Heater 1 should be OFF\n");
 }
 
 void set_heater_1_mid_fn(void) {
-    set_heater_1_temp_setpoint(28);
-    print("Set heater 1 setpoint (DAC A) = 28 C\n");
+    set_heater_1(28);
 }
 
 void turn_heater_2_on_fn(void) {
-    set_heater_2_temp_setpoint(100);
-    print("Set heater 2 setpoint (DAC B) = 100 C\n");
+    set_heater_2(100);
     print("Heater 2 should be ON\n");
 }
 
 void turn_heater_2_off_fn(void) {
-    set_heater_2_temp_setpoint(0);
-    print("Set heater 2 setpoint (DAC B) = 0 C\n");
+    set_heater_2(0);
     print("Heater 2 should be OFF\n");
 }
 
 void set_heater_2_mid_fn(void) {
-    set_heater_2_temp_setpoint(28);
-    print("Set heater 2 setpoint (DAC B) = 28 C\n");
+    set_heater_2(28);
 }
 
 
@@ -138,9 +177,42 @@ void print_cmds(void) {
     }
 }
 
+bool is_num(char c) {
+    if ('0' <= c && c <= '9') {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+uint8_t char_to_num(char c) {
+    return c - '0';
+}
+
 uint8_t uart_cb(const uint8_t* data, uint8_t len) {
     if (len == 0) {
         return 0;
+    }
+
+    if (entering_num) {
+        if (len < 4) {
+            return 0;
+        }
+        entering_num = false;
+        if (is_num(data[0]) && is_num(data[1]) && data[2] == '.' && is_num(data[3])) {
+            entered_num =
+                (10.0 * char_to_num(data[0])) +
+                (1.0 * char_to_num(data[1])) +
+                (0.1 * char_to_num(data[3]));
+            entered_num_valid = true;
+            print("Got number %.1f\n", entered_num);
+        } else {
+            entered_num = 0.0;
+            entered_num_valid = false;
+            print("Invalid number, must be of the form ##.#\n");
+        }
+
+        return len;
     }
 
     // Print the typed character
