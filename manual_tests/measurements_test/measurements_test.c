@@ -59,7 +59,7 @@ int main(void) {
         read_current("BB IOUT", MEAS_BB_IOUT);
         read_current("-Y IOUT", MEAS_NEG_Y_IOUT);
         read_current("+X IOUT", MEAS_POS_X_IOUT);
-        read_current("-Y IOUT", MEAS_POS_Y_IOUT);
+        read_current("+Y IOUT", MEAS_POS_Y_IOUT);
         read_current("-X IOUT", MEAS_NEG_X_IOUT);
         read_therm("THERM 1", MEAS_THERM_1);
         read_therm("THERM 2", MEAS_THERM_2);

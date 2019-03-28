@@ -22,16 +22,13 @@ typedef struct {
     uart_cmd_fn_t fn;
 } uart_cmd_t;
 
-void read_thermistor_data_fn(void);
-void print_setpoints_fn(void);
-void set_heater_1_arbitrary_fn(void);
-void set_heater_2_arbitrary_fn(void);
+void read_data_fn(void);
+void set_heater_1_setpoint_fn(void);
+void set_heater_2_setpoint_fn(void);
 void turn_heater_1_on_fn(void);
 void turn_heater_1_off_fn(void);
-void set_heater_1_mid_fn(void);
 void turn_heater_2_on_fn(void);
 void turn_heater_2_off_fn(void);
-void set_heater_2_mid_fn(void);
 
 volatile bool entering_num = false;
 volatile uint8_t entering_num_heater = 0;   // 1 or 2
@@ -40,20 +37,16 @@ volatile uint8_t entering_num_heater = 0;   // 1 or 2
 // All possible commands
 uart_cmd_t all_cmds[] = {
     {
-        .description = "Read thermistor data",
-        .fn = read_thermistor_data_fn
+        .description = "Read data",
+        .fn = read_data_fn
     },
     {
-        .description = "Print setpoints",
-        .fn = print_setpoints_fn
+        .description = "Set heater 1 setpoint",
+        .fn = set_heater_1_setpoint_fn
     },
     {
-        .description = "Set heater 1 arbitrary setpoint",
-        .fn = set_heater_1_arbitrary_fn
-    },
-    {
-        .description = "Set heater 2 arbitrary setpoint",
-        .fn = set_heater_2_arbitrary_fn
+        .description = "Set heater 2 setpoint",
+        .fn = set_heater_2_setpoint_fn
     }
     // {
     //     .description = "Turn heater 1 on",
@@ -64,31 +57,16 @@ uart_cmd_t all_cmds[] = {
     //     .fn = turn_heater_1_off_fn
     // },
     // {
-    //     .description = "Set heater 1 middle setpoint",
-    //     .fn = set_heater_1_mid_fn
-    // },
-    // {
     //     .description = "Turn heater 2 on",
     //     .fn = turn_heater_2_on_fn
     // },
     // {
     //     .description = "Turn heater 2 off",
     //     .fn = turn_heater_2_off_fn
-    // },
-    // {
-    //     .description = "Set heater 2 middle setpoint",
-    //     .fn = set_heater_2_mid_fn
     // }
 };
 // Length of array
 const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
-
-// Modify this array to contain the ADC channels you want to monitor
-// (channels 10 and 11 are something else - motor positioning sensors)
-uint8_t adc_channels[] = { MEAS_THERM_1, MEAS_THERM_2 };
-// uint8_t adc_channels[] = {0, 1, 2};
-// automatically calculate the length of the array
-uint8_t adc_channels_len = sizeof(adc_channels) / sizeof(adc_channels[0]);
 
 
 void set_heater_1(double temp) {
@@ -102,56 +80,65 @@ void set_heater_2(double temp) {
 }
 
 
-void read_thermistor_data_fn(void) {
-    // print("\n");
-    // print("Channel, Raw (12 bits), Voltage (V), Resistance (kohms), Temperature (C)\n");
-    //
-    // //Find resistance for each channel
-    // //only calculate it for the thermistors specified in adc_channels
-    // for (uint8_t i = 0; i < adc_channels_len; i++) {
-    //     // Read ADC channel data
-    //     uint8_t channel = adc_channels[i];
-    //     fetch_adc_channel(&adc, channel);
-    //     uint16_t raw_data = read_adc_channel(&adc, channel);
-    //
-    //     double voltage = adc_raw_data_to_raw_vol(raw_data);
-    //     //Convert adc voltage to resistance of thermistor
-    //     double resistance = therm_vol_to_res(voltage);
-    //     //Convert resistance to temperature of thermistor
-    //     double temperature = adc_raw_data_to_therm_temp(raw_data);
-    //
-    //     print("%u: 0x%.3X, %.3f, %.3f, %.3f\n", channel, raw_data, voltage, resistance, temperature);
-    // }
-
-    uint16_t raw_data;
-    double temperature;
-
-    print("Thermistor Temperatures:\n");
-
-    fetch_adc_channel(&adc, MEAS_THERM_1);
-    raw_data = read_adc_channel(&adc, MEAS_THERM_1);
-    temperature = adc_raw_data_to_therm_temp(raw_data);
-    print("Thermistor 1: %.3f C\n", temperature);
-
-    fetch_adc_channel(&adc, MEAS_THERM_2);
-    raw_data = read_adc_channel(&adc, MEAS_THERM_2);
-    temperature = adc_raw_data_to_therm_temp(raw_data);
-    print("Thermistor 2: %.3f C\n", temperature);
+void read_voltage(char* name, uint8_t channel) {
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double voltage = adc_raw_data_to_eps_vol(raw_data);
+    print("%s (%u): 0x%03x = %.6f V\n", name, channel, raw_data, voltage);
 }
 
-void print_setpoints_fn(void) {
-    print("Heater Setpoints:\n");
-    print("Heater 1: %.3f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_a))));
-    print("Heater 2: %.3f C\n", therm_res_to_temp(therm_vol_to_res(dac_raw_data_to_vol(dac.raw_voltage_b))));
+void read_current(char* name, uint8_t channel) {
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double current = adc_raw_data_to_eps_cur(raw_data);
+    print("%s (%u): 0x%03x = %.6f A\n", name, channel, raw_data, current);
 }
 
-void set_heater_1_arbitrary_fn(void) {
+void read_therm(char* name, uint8_t channel) {
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double temp = adc_raw_data_to_therm_temp(raw_data);
+    print("%s (%u): 0x%03x = %.6f C\n", name, channel, raw_data, temp);
+}
+
+void read_setpoint(char* name, uint16_t raw_voltage) {
+    print("%s: %.6f C\n", name, therm_res_to_temp(therm_vol_to_res(
+        dac_raw_data_to_vol(raw_voltage))));
+}
+
+void read_data_fn(void) {
+    read_voltage("BB Vol", MEAS_BB_VOUT);
+    read_current("BB Cur", MEAS_BB_IOUT);
+    read_current("-Y Cur", MEAS_NEG_Y_IOUT);
+    read_current("+X Cur", MEAS_POS_X_IOUT);
+    read_current("+Y Cur", MEAS_POS_Y_IOUT);
+    read_current("-X Cur", MEAS_NEG_X_IOUT);
+    read_therm("Temp 1", MEAS_THERM_1);
+    read_therm("Temp 2", MEAS_THERM_2);
+    read_voltage("Bat Vol", MEAS_PACK_VOUT);
+
+    // Use a different conversion formula for battery current (bipolar operation)
+    // TODO - change conversion in lib-common
+    char* name = "Bat Cur";
+    uint8_t channel = MEAS_PACK_IOUT;
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double current = adc_raw_data_to_eps_cur(raw_data) - 2.5;
+    print("%s (%u): 0x%03x = %.6f A\n", name, channel, raw_data, current);
+
+    read_current("BT Cur", MEAS_BT_IOUT);
+    read_voltage("BT Vol", MEAS_BT_VOUT);
+    read_setpoint("Setpoint 1 (A)", dac.raw_voltage_a);
+    read_setpoint("Setpoint 2 (B)", dac.raw_voltage_b);
+}
+
+void set_heater_1_setpoint_fn(void) {
     print("Enter a number of the format ##.#\n");
     entering_num_heater = 1;
     entering_num = true;
 }
 
-void set_heater_2_arbitrary_fn(void) {
+void set_heater_2_setpoint_fn(void) {
     print("Enter a number of the format ##.#\n");
     entering_num_heater = 2;
     entering_num = true;
@@ -167,10 +154,6 @@ void turn_heater_1_off_fn(void) {
     print("Heater 1 should be OFF\n");
 }
 
-void set_heater_1_mid_fn(void) {
-    set_heater_1(28);
-}
-
 void turn_heater_2_on_fn(void) {
     set_heater_2(100);
     print("Heater 2 should be ON\n");
@@ -180,11 +163,6 @@ void turn_heater_2_off_fn(void) {
     set_heater_2(0);
     print("Heater 2 should be OFF\n");
 }
-
-void set_heater_2_mid_fn(void) {
-    set_heater_2(28);
-}
-
 
 
 void print_cmds(void) {
