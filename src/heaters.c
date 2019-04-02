@@ -47,7 +47,13 @@ void set_heater_2_temp_setpoint(double temp) {
 
 void init_heaters() {
     uint16_t heater_1_last_setpoint = eeprom_read_dword(HEATER_1_RAW_SETPOINT_ADDR);
+    if (heater_1_last_setpoint == EEPROM_DEF_DWORD){
+        heater_1_last_setpoint = 0;
+    }
     uint16_t heater_2_last_setpoint = eeprom_read_dword(HEATER_2_RAW_SETPOINT_ADDR);
+    if (heater_2_last_setpoint == EEPROM_DEF_DWORD){
+        heater_2_last_setpoint = 0;
+    }
     set_heater_1_raw_setpoint(heater_1_last_setpoint);
     set_heater_2_raw_setpoint(heater_2_last_setpoint);
 }

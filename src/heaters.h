@@ -6,6 +6,11 @@
 
 #include "devices.h"
 
+#define EEPROM_DEF_DWORD 0xFFFFFFFF
+
+//EEPROM address for storing raw data
+#define HEATER_1_RAW_SETPOINT_ADDR ((uint32_t*) 0x70)
+#define HEATER_2_RAW_SETPOINT_ADDR ((uint32_t*) 0x74)
 void set_heater_1_raw_setpoint(uint16_t raw_data);
 void set_heater_2_raw_setpoint(uint16_t raw_data);
 
