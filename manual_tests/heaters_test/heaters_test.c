@@ -108,22 +108,6 @@ void read_setpoint(uint16_t raw_voltage) {
 
 void read_data_fn(void) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        print(", BB Vol (V)");
-        print(", BB Cur (A)");
-        print(", -Y Cur (A)");
-        print(", +X Cur (A)");
-        print(", +Y Cur (A)");
-        print(", -X Cur (A)");
-        print(", Temp 1 (C)");
-        print(", Temp 2 (C)");
-        print(", Bat Vol (V)");
-        print(", Bat Cur (A)");
-        print(", BT Cur (A)");
-        print(", BT Vol (V)");
-        print(", Setpoint 1 (C)");
-        print(", Setpoint 2 (C)");
-        print("\n");
-
         read_voltage(MEAS_BB_VOUT);
         read_current(MEAS_BB_IOUT);
         read_current(MEAS_NEG_Y_IOUT);
@@ -133,6 +117,7 @@ void read_data_fn(void) {
         read_therm(MEAS_THERM_1);
         read_therm(MEAS_THERM_2);
         read_voltage(MEAS_PACK_VOUT);
+
         // Use a different conversion formula for battery current (bipolar operation)
         // TODO - change conversion in lib-common
         uint8_t channel = MEAS_PACK_IOUT;
@@ -140,6 +125,7 @@ void read_data_fn(void) {
         uint16_t raw_data = read_adc_channel(&adc, channel);
         double current = adc_raw_data_to_eps_cur(raw_data) - 2.5;
         print(", %.6f", current);
+
         read_current(MEAS_BT_IOUT);
         read_voltage(MEAS_BT_VOUT);
         read_setpoint(dac.raw_voltage_a);
@@ -277,6 +263,11 @@ int main(void) {
     print("\nAt any time, press h to show the command menu\n");
     print_cmds();
     set_uart_rx_cb(uart_cb);
+
+    print(", BB Vol (V), BB Cur (A), -Y Cur (A), +X Cur (A), +Y Cur (A)");
+    print(", -X Cur (A), Temp 1 (C), Temp 2 (C), Bat Vol (V), Bat Cur (A)");
+    print(", BT Cur (A), BT Vol (V), Setpoint 1 (C), Setpoint 2 (C)");
+    print("\n");
 
     while (1) {
         read_data_fn();
