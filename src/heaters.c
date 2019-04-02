@@ -17,12 +17,16 @@ Datasheet: https://www.st.com/content/ccc/resource/technical/document/datasheet/
 // raw_data - 12 bit DAC raw data for setpoint
 void set_heater_1_raw_setpoint(uint16_t raw_data) {
     set_dac_raw_voltage(&dac, DAC_A, raw_data);
+    //save to EEPROM
+    eeprom_write_dword(HEATER_1_RAW_SETPOINT_ADDR,raw_data);
 }
 
 // Sets temperature setpoint of heater 2 (connected to DAC B)
 // raw_data - 12 bit DAC raw data for setpoint
 void set_heater_2_raw_setpoint(uint16_t raw_data) {
     set_dac_raw_voltage(&dac, DAC_B, raw_data);
+    //save to EEPROM
+    eeprom_write_dword(HEATER_2_RAW_SETPOINT_ADDR,raw_data);
 }
 
 // temp - in C
@@ -39,4 +43,11 @@ void set_heater_2_temp_setpoint(double temp) {
     double vol = therm_res_to_vol(res);
     uint16_t raw_data = dac_vol_to_raw_data(vol);
     set_heater_2_raw_setpoint(raw_data);
+}
+
+void init_heaters() {
+    uint16_t heater_1_last_setpoint = eeprom_read_dword(HEATER_1_RAW_SETPOINT_ADDR);
+    uint16_t heater_2_last_setpoint = eeprom_read_dword(HEATER_2_RAW_SETPOINT_ADDR);
+    set_heater_1_raw_setpoint(heater_1_last_setpoint);
+    set_heater_2_raw_setpoint(heater_2_last_setpoint);
 }
