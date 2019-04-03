@@ -255,10 +255,11 @@ int main(void) {
     init_dac(&dac);
     init_adc(&adc);
 
-    print("\n\n\nStarting test\n\n");
+    init_heaters();
 
-    turn_heater_1_off_fn();
-    turn_heater_2_off_fn();
+    print("\n\n\nStarting test\n\n");
+    print("DAC Raw Voltage A: %.4x = %f c\n", dac.raw_voltage_a, adc_raw_data_to_therm_temp(dac.raw_voltage_a));
+    print("DAC Raw Voltage B: %.4x = %f c\n", dac.raw_voltage_b, adc_raw_data_to_therm_temp(dac.raw_voltage_b));
 
     print("\nAt any time, press h to show the command menu\n");
     print_cmds();
