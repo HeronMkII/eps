@@ -80,56 +80,58 @@ void set_heater_2(double temp) {
 }
 
 
-void read_voltage(char* name, uint8_t channel) {
+void read_voltage(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double voltage = adc_raw_data_to_eps_vol(raw_data);
-    print("%s (%u): 0x%03x = %.6f V\n", name, channel, raw_data, voltage);
+    print(", %.6f", voltage);
 }
 
-void read_current(char* name, uint8_t channel) {
+void read_current(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double current = adc_raw_data_to_eps_cur(raw_data);
-    print("%s (%u): 0x%03x = %.6f A\n", name, channel, raw_data, current);
+    print(", %.6f", current);
 }
 
-void read_therm(char* name, uint8_t channel) {
+void read_therm(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double temp = adc_raw_data_to_therm_temp(raw_data);
-    print("%s (%u): 0x%03x = %.6f C\n", name, channel, raw_data, temp);
+    print(", %.6f", temp);
 }
 
-void read_setpoint(char* name, uint16_t raw_voltage) {
-    print("%s: %.6f C\n", name, therm_res_to_temp(therm_vol_to_res(
+void read_setpoint(uint16_t raw_voltage) {
+    print(", %.6f", therm_res_to_temp(therm_vol_to_res(
         dac_raw_data_to_vol(raw_voltage))));
 }
 
 void read_data_fn(void) {
-    read_voltage("BB Vol", MEAS_BB_VOUT);
-    read_current("BB Cur", MEAS_BB_IOUT);
-    read_current("-Y Cur", MEAS_NEG_Y_IOUT);
-    read_current("+X Cur", MEAS_POS_X_IOUT);
-    read_current("+Y Cur", MEAS_POS_Y_IOUT);
-    read_current("-X Cur", MEAS_NEG_X_IOUT);
-    read_therm("Temp 1", MEAS_THERM_1);
-    read_therm("Temp 2", MEAS_THERM_2);
-    read_voltage("Bat Vol", MEAS_PACK_VOUT);
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        read_voltage(MEAS_BB_VOUT);
+        read_current(MEAS_BB_IOUT);
+        read_current(MEAS_NEG_Y_IOUT);
+        read_current(MEAS_POS_X_IOUT);
+        read_current(MEAS_POS_Y_IOUT);
+        read_current(MEAS_NEG_X_IOUT);
+        read_therm(MEAS_THERM_1);
+        read_therm(MEAS_THERM_2);
+        read_voltage(MEAS_PACK_VOUT);
 
-    // Use a different conversion formula for battery current (bipolar operation)
-    // TODO - change conversion in lib-common
-    char* name = "Bat Cur";
-    uint8_t channel = MEAS_PACK_IOUT;
-    fetch_adc_channel(&adc, channel);
-    uint16_t raw_data = read_adc_channel(&adc, channel);
-    double current = adc_raw_data_to_eps_cur(raw_data) - 2.5;
-    print("%s (%u): 0x%03x = %.6f A\n", name, channel, raw_data, current);
+        // Use a different conversion formula for battery current (bipolar operation)
+        // TODO - change conversion in lib-common
+        uint8_t channel = MEAS_PACK_IOUT;
+        fetch_adc_channel(&adc, channel);
+        uint16_t raw_data = read_adc_channel(&adc, channel);
+        double current = adc_raw_data_to_eps_cur(raw_data) - 2.5;
+        print(", %.6f", current);
 
-    read_current("BT Cur", MEAS_BT_IOUT);
-    read_voltage("BT Vol", MEAS_BT_VOUT);
-    read_setpoint("Setpoint 1 (A)", dac.raw_voltage_a);
-    read_setpoint("Setpoint 2 (B)", dac.raw_voltage_b);
+        read_current(MEAS_BT_IOUT);
+        read_voltage(MEAS_BT_VOUT);
+        read_setpoint(dac.raw_voltage_a);
+        read_setpoint(dac.raw_voltage_b);
+        print("\n");
+    }
 }
 
 void set_heater_1_setpoint_fn(void) {
@@ -262,7 +264,15 @@ int main(void) {
     print_cmds();
     set_uart_rx_cb(uart_cb);
 
-    while (1) {}
+    print(", BB Vol (V), BB Cur (A), -Y Cur (A), +X Cur (A), +Y Cur (A)");
+    print(", -X Cur (A), Temp 1 (C), Temp 2 (C), Bat Vol (V), Bat Cur (A)");
+    print(", BT Cur (A), BT Vol (V), Setpoint 1 (C), Setpoint 2 (C)");
+    print("\n");
+
+    while (1) {
+        read_data_fn();
+        _delay_ms(5000);
+    }
 
     return 0;
 }
