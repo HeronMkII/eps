@@ -47,6 +47,8 @@ Channel usage (#2 p. 15)
 
 Configure sensor to "normal" instead of "wakeup" (#1 p. 33)
 
+Cannot use one-shot trigger mode reporting, only continuous (#1 p.34-35)
+
 
 Currently used sensors (TODO):
 - accelerometer
@@ -168,14 +170,66 @@ void init_imu(void) {
     receive_and_discard_imu_packet();
     // _delay_ms(200);
 
-    receive_and_discard_imu_packet();
-    // _delay_ms(200);
+    // receive_and_discard_imu_packet();
+    // // _delay_ms(200);
+    // receive_and_discard_imu_packet();
+    // receive_and_discard_imu_packet();
+    // receive_and_discard_imu_packet();
 
-    receive_and_discard_imu_packet();
-    receive_and_discard_imu_packet();
+
+    // Request product ID (#0 p.23)
+    start_imu_spi();
+    send_imu_header(2, IMU_CONTROL);
+    send_spi(IMU_PRODUCT_ID_REQ);
+    send_spi(0x00); // reserved
+    end_imu_spi();
+    // Get response
     receive_and_discard_imu_packet();
 
     // TODO - in SPI library, log all sent and received bytes
+}
+
+// Get feature request
+void get_feat_req(void) {
+    // Looking for "input report" for actual read sensor data
+    // "Get feature response" just tells the configuration of the sensor, not the actual read data
+    // "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
+    // Input reports, output reports, feature reports (#1 p.32-33)
+    // "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
+    // "Input reports may also be requested by the host at any time." (#1 p.32-33)
+    // Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
+    // Set feature command -> get feature response (should be R instead of W)
+
+}
+
+void get_imu_accel(void) {
+    // TODO - Q point?
+
+    print("getting accel\n");
+
+    // Set feature command (#1 p.55-56)
+    start_imu_spi();
+    send_imu_header(17, IMU_CONTROL);
+    send_spi(IMU_SET_FEAT_CMD); // 0
+    send_spi(IMU_ACCEL);        // 1
+    send_spi(0x00);             // 2
+    send_spi(0x00);             // 3
+    send_spi(0x00);             // 4
+    // TODO - for now, 1us report interval - check units
+    send_spi(0x01);             // 5
+    send_spi(0x00);             // 6
+    send_spi(0x00);             // 7
+    send_spi(0x00);             // 8
+    send_spi(0x00);             // 9
+    send_spi(0x00);             // 10
+    send_spi(0x00);             // 11
+    send_spi(0x00);             // 12
+    send_spi(0x00);             // 13
+    send_spi(0x00);             // 14
+    send_spi(0x00);             // 15
+    send_spi(0x00);             // 16
+    end_imu_spi();
+    receive_and_discard_imu_packet();
 }
 
 void reset_imu(void) {
@@ -250,6 +304,7 @@ void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num) {
 
     // Concatenate length
     *length = (((uint16_t) length_msb) << 8) | ((uint16_t) length_lsb);
+    print("raw length = %u\n", *length);
     // Just in case of a malfunction, make length at least 4
     if (*length < 4) {
         *length = 4;
@@ -259,6 +314,7 @@ void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num) {
     *length &= ~_BV(15);
     // Subtract 4 bytes of header
     *length -= 4;
+    print("processed length = %u\n", *length);
 
     // Increment the sequence number for that channel
     imu_seq_nums[*channel]++;
@@ -287,6 +343,8 @@ uint8_t receive_and_discard_imu_packet(void) {
     }
     print("\n");
     end_imu_spi();
+
+    return 1;
 }
 
 // INT2 interrupt from INTn pin
