@@ -258,8 +258,8 @@ int main(void) {
     init_heaters();
 
     print("\n\n\nStarting test\n\n");
-    print("DAC Raw Voltage A: %.4x\n", dac.raw_voltage_a);
-    print("DAC Raw Voltage B: %.4x\n", dac.raw_voltage_b);
+    print("DAC Raw Voltage A: %.4x = %f c\n", dac.raw_voltage_a, adc_raw_data_to_therm_temp(dac.raw_voltage_a));
+    print("DAC Raw Voltage B: %.4x = %f c\n", dac.raw_voltage_b, adc_raw_data_to_therm_temp(dac.raw_voltage_b));
 
     print("\nAt any time, press h to show the command menu\n");
     print_cmds();
