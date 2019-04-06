@@ -25,6 +25,8 @@ datasheet).
 #2 (Sensor Hub Transport Protocol): https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
     This document described the more general SHTP protocol, not specific to this part
 
+One transmission to or from the IMU is referred to as a "packet", which is split up into the "header" and the "data".
+
 Reference Implementation: https://github.com/hcrest/bno080-driver
 
 SPI Interface - #0 p. 17-19
@@ -118,6 +120,11 @@ pin_info_t imu_int = {
 // Count the number of messages on each SHTP channel (in SHTP header) (#2 p. 4)
 uint8_t imu_seq_nums[6] = { 0 };
 
+uint8_t imu_header[IMU_HEADER_LEN] = { 0x00 };
+uint8_t imu_data[IMU_DATA_MAX_LEN] = { 0x00 };
+// Number of valid bytes in `imu_data`, NOT including the header
+uint8_t imu_data_len = 0;
+
 /*
 Initializes the IMU (#0 p. 43).
 */
@@ -178,58 +185,14 @@ void init_imu(void) {
 
 
     // Request product ID (#0 p.23)
-    start_imu_spi();
-    send_imu_header(2, IMU_CONTROL);
-    send_spi(IMU_PRODUCT_ID_REQ);
-    send_spi(0x00); // reserved
-    end_imu_spi();
+    imu_data[0] = IMU_PRODUCT_ID_REQ;
+    imu_data[1] = 0x00; // reserved
+    imu_data_len = 2;
+    send_imu_packet(IMU_CONTROL);
     // Get response
     receive_and_discard_imu_packet();
 
     // TODO - in SPI library, log all sent and received bytes
-}
-
-// Get feature request
-void get_feat_req(void) {
-    // Looking for "input report" for actual read sensor data
-    // "Get feature response" just tells the configuration of the sensor, not the actual read data
-    // "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
-    // Input reports, output reports, feature reports (#1 p.32-33)
-    // "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
-    // "Input reports may also be requested by the host at any time." (#1 p.32-33)
-    // Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
-    // Set feature command -> get feature response (should be R instead of W)
-
-}
-
-void get_imu_accel(void) {
-    // TODO - Q point?
-
-    print("getting accel\n");
-
-    // Set feature command (#1 p.55-56)
-    start_imu_spi();
-    send_imu_header(17, IMU_CONTROL);
-    send_spi(IMU_SET_FEAT_CMD); // 0
-    send_spi(IMU_ACCEL);        // 1
-    send_spi(0x00);             // 2
-    send_spi(0x00);             // 3
-    send_spi(0x00);             // 4
-    // TODO - for now, 1us report interval - check units
-    send_spi(0x01);             // 5
-    send_spi(0x00);             // 6
-    send_spi(0x00);             // 7
-    send_spi(0x00);             // 8
-    send_spi(0x00);             // 9
-    send_spi(0x00);             // 10
-    send_spi(0x00);             // 11
-    send_spi(0x00);             // 12
-    send_spi(0x00);             // 13
-    send_spi(0x00);             // 14
-    send_spi(0x00);             // 15
-    send_spi(0x00);             // 16
-    end_imu_spi();
-    receive_and_discard_imu_packet();
 }
 
 void reset_imu(void) {
@@ -239,6 +202,266 @@ void reset_imu(void) {
     _delay_ms(10);
     set_pin_high(imu_rst.pin, imu_rst.port);
 }
+
+void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
+    imu_header[0] = length & 0xFF;
+    imu_header[1] = (length >> 8) & 0xFF;
+    imu_header[2] = channel;
+    imu_header[3] = seq_num;
+}
+
+void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length) {
+    // Concatenate length
+    *length = (((uint16_t) imu_header[1]) << 8) | ((uint16_t) imu_header[0]);
+    *channel = imu_header[2];
+    *seq_num = imu_header[3];
+}
+
+/*
+Populate `imu_data` before calling this; this function will take care of populating and sending the header.
+channel - 0 to 5
+Returns - 1 for success, 0 for failure
+*/
+uint8_t send_imu_packet(uint8_t channel) {
+    if (channel >= IMU_CHANNEL_COUNT) {
+        return 0;
+    }
+
+    populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
+
+    print("Sending IMU SPI:\n");
+    print("Header: ");
+    print_bytes(imu_header, IMU_HEADER_LEN);
+    print("Data: ");
+    print_bytes(imu_data, imu_data_len);
+
+    // Set feature command (#1 p.55-56)
+    start_imu_spi();
+    for (uint8_t i = 0; i < IMU_HEADER_LEN; i++) {
+        send_spi(imu_header[i]);
+    }
+    for (uint8_t i = 0; i < imu_data_len; i++) {
+        send_spi(imu_data[i]);
+    }
+    end_imu_spi();
+
+    // Increment the sequence number for that channel
+    imu_seq_nums[channel]++;
+
+    return 1;
+}
+
+/*
+This function will populate `imu_header` and `imu_data`
+Returns - 1 for success, 0 for failure (either no interrupt or too long message for buffer)
+*/
+uint8_t receive_imu_packet(void) {
+    if (!wait_for_imu_int()) {
+        return 0;
+    }
+
+    start_imu_spi();
+    
+    // Get header
+    // Add this header length (should be length of cargo + header)
+    // Note LSB first
+    for (uint8_t i = 0; i < IMU_HEADER_LEN; i++) {
+        imu_header[i] = send_spi(0x00);
+    }
+    print("Received IMU SPI:\n");
+    print("Header: ");
+    print_bytes(imu_header, IMU_HEADER_LEN);
+    uint8_t channel = 0;
+    uint8_t seq_num = 0;
+    uint16_t length = 0;
+    process_imu_header(&channel, &seq_num, &length);
+    // TODO - check if seq_num is correct
+
+    // MSB (bit 15) is used to indicate if the transfer is a continuation of the
+    // previous transfer (not applicable for us)
+    length &= ~_BV(15);
+
+    // Just in case of a malfunction, make length at least 4
+    if (length < IMU_HEADER_LEN) {
+        length = IMU_HEADER_LEN;
+    }
+
+    // Increment the sequence number for that channel
+    if (channel < IMU_CHANNEL_COUNT) {
+        imu_seq_nums[channel]++;
+    }
+
+    // Get data
+    // Subtract 4 bytes of header
+    uint16_t data_len = length - IMU_HEADER_LEN;
+    imu_data_len = 0;
+    for (uint8_t i = 0; i < data_len; i++) {
+        uint8_t byte = send_spi(0x00);
+        if (i < IMU_DATA_MAX_LEN) {
+            imu_data[i] = byte;
+            imu_data_len++;
+        }
+    }
+
+    end_imu_spi();
+
+    print("Data: ");
+    print_bytes(imu_data, imu_data_len);
+
+    if (data_len > IMU_DATA_MAX_LEN) {
+        print("Received packet too long\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+/*
+Set feature command (#1 p.55-56)
+*/
+uint8_t set_imu_feature(uint8_t feat_report_id) {
+    imu_data[0] = IMU_SET_FEAT_CMD;
+    imu_data[1] = feat_report_id;
+    imu_data[2] = 0x00;
+    imu_data[3] = 0x00;
+    imu_data[4] = 0x00;
+    // TODO - for now, 60,000us report interval (this is in microseconds)
+    imu_data[5] = 0x60;
+    imu_data[6] = 0xEA;
+    imu_data[7] = 0x00;
+    imu_data[8] = 0x00;
+    imu_data[9] = 0x00;
+    imu_data[10] = 0x00;
+    imu_data[11] = 0x00;
+    imu_data[12] = 0x00;
+    imu_data[13] = 0x00;
+    imu_data[14] = 0x00;
+    imu_data[15] = 0x00;
+    imu_data[16] = 0x00;
+    imu_data_len = 17;
+    if (!send_imu_packet(IMU_CONTROL)) {
+        return 0;
+    }
+
+    // TODO - get feature response?
+    receive_and_discard_imu_packet();
+
+    return 1;
+}
+
+uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
+    // TODO - Q point?
+    // Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
+    // https://en.wikipedia.org/wiki/Q_(number_format)
+    // TODO - m/s^2? change precision?
+
+    print("getting accel\n");
+
+    if (!set_imu_feature(IMU_ACCEL)) {
+        return 0;
+    }
+
+    // Try 10 packets
+    // TODO - what timeout/number?
+    for (uint8_t i = 0; i < 10; i++) {
+        _delay_ms(100);
+
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        // TODO - does this contain the timebase reference? does that only apply to batching? are we using batching? (#0 p.44, #1 p.79)
+        if (imu_data_len != 10) {
+            continue;
+        }
+        if (imu_data[0] != IMU_ACCEL) {
+            continue;
+        }
+
+        if (x != NULL) {
+            *x = (((uint16_t) imu_data[5]) << 8) | ((uint16_t) imu_data[4]);
+        }
+        if (y != NULL) {
+            *y = (((uint16_t) imu_data[7]) << 8) | ((uint16_t) imu_data[6]);
+        }
+        if (z != NULL) {
+            *z = (((uint16_t) imu_data[9]) << 8) | ((uint16_t) imu_data[8]);
+        }
+
+        return 1;
+    }
+
+    return 0;
+}
+
+// TODO - calibrate gyroscope CAN/trans command?
+// Gyro/angular velocity measurements (#0 p.31)
+// Gyroscope drift:
+// https://www.analog.com/en/analog-dialogue/raqs/raq-issue-139.html
+// https://motsai.com/handling-gyroscopes-bias-drift/
+// https://stemrobotics.cs.pdx.edu/sites/default/files/Gyro.pdf
+// https://base.xsens.com/hc/en-us/articles/209611089-Understanding-Sensor-Bias-offset-
+// https://stackoverflow.com/questions/14210206/gyroscope-drift-on-mobile-phones
+// https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
+
+/*
+Raw uncalibrated gyroscope (ADC units) (#1 p.59)
+*/
+uint8_t get_imu_raw_gyro(uint16_t* x, uint16_t* y, uint16_t* z) {
+    print("getting raw gyro\n");
+
+    if (!set_imu_feature(IMU_RAW_GYRO)) {
+        return 0;
+    }
+
+    // Try 10 packets
+    // TODO - what timeout/number?
+    for (uint8_t i = 0; i < 10; i++) {
+        _delay_ms(100);
+
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        // TODO - does this contain the timebase reference? does that only apply to batching? are we using batching? (#0 p.44, #1 p.79)
+        if (imu_data_len != 16) {
+            continue;
+        }
+        if (imu_data[0] != IMU_RAW_GYRO) {
+            continue;
+        }
+
+        if (x != NULL) {
+            *x = (((uint16_t) imu_data[5]) << 8) | ((uint16_t) imu_data[4]);
+        }
+        if (y != NULL) {
+            *y = (((uint16_t) imu_data[7]) << 8) | ((uint16_t) imu_data[6]);
+        }
+        if (z != NULL) {
+            *z = (((uint16_t) imu_data[9]) << 8) | ((uint16_t) imu_data[8]);
+        }
+
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
+Uncalibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
+Non-drift-compensated rotational velocity
+"rotational velocity without drift compensation. An estimate of drift is also reported."
+*/
+uint8_t get_imu_uncal_gyro(void) {
+    return 1;
+}
+
+/*
+Calibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
+Drift-compensated rotational velocity
+*/
+uint8_t get_imu_cal_gyro(void) {
+    return 1;
+}
+
 
 /*
 Waits until the interrupt pin goes low.
@@ -271,83 +494,35 @@ void end_imu_spi(void) {
     reset_spi_cpol_cpha();
 }
 
-/*
-Sends the 4-byte SHTP header and increments the sequence number (#2 p. 4).
-length - should NOT include the header length (this function will add the header length)
-*/
-void send_imu_header(uint16_t length, uint8_t channel) {
-    // Add this header length (should be length of cargo + header)
-    length += 4;
-
-    // LSB first for length
-    send_spi(length & 0xFF);
-    send_spi((length >> 8) & 0xFF);
-    send_spi(channel);
-    send_spi(imu_seq_nums[channel]);
-
-    // Increment the sequence number for that channel
-    imu_seq_nums[channel]++;
-}
-
-/*
-Receives the 4-byte SHTP header and increments the sequence number (#2 p. 4).
-length - will NOT include the header length (this function will subtract the header length)
-*/
-void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num) {
-    // Add this header length (should be length of cargo + header)
-    // Note LSB first
-    uint8_t length_lsb = send_spi(0x00);
-    uint8_t length_msb = send_spi(0x00);
-    *channel = send_spi(0x00);
-    // TODO - check if seq_num is correct
-    *seq_num = send_spi(0x00);
-
-    // Concatenate length
-    *length = (((uint16_t) length_msb) << 8) | ((uint16_t) length_lsb);
-    print("raw length = %u\n", *length);
-    // Just in case of a malfunction, make length at least 4
-    if (*length < 4) {
-        *length = 4;
-    }
-    // MSB (bit 15) is used to indicate if the transfer is a continuation of the
-    // previous transfer (not applicable for us)
-    *length &= ~_BV(15);
-    // Subtract 4 bytes of header
-    *length -= 4;
-    print("processed length = %u\n", *length);
-
-    // Increment the sequence number for that channel
-    imu_seq_nums[*channel]++;
-}
-
 uint8_t receive_and_discard_imu_packet(void) {
-    if (!wait_for_imu_int()) {
+    if (!receive_imu_packet()) {
         return 0;
     }
 
-    uint16_t length = 0;
-    uint8_t channel = 0;
-    uint8_t seq_num = 0;
-
-    start_imu_spi();
-    receive_imu_header(&length, &channel, &seq_num);
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        print("Received header: length = %u, channel = %u, seq_num = %u\n", length, channel, seq_num);
+    print("Received packet\n");
+    for (uint16_t i = 0; i < imu_data_len; i++) {
+        put_uart_char(imu_data[i]);
     }
-    print("Received SPI:");
-    for (uint16_t i = 0; i < length; i++) {
-        uint8_t data = send_spi(0x00);
-        // print(" %02X", data);
-        // put_uart_char(' ');
-        put_uart_char(data);
-    }
-    print("\n");
-    end_imu_spi();
-
+    put_uart_char('\n');
+    print_bytes(imu_data, imu_data_len);
+    
     return 1;
 }
 
 // INT2 interrupt from INTn pin
 ISR(INT2_vect) {
-    print("IMU INT: pin = %u\n", get_pin_val(imu_int.pin, imu_int.port));
+    print("\nIMU INT: pin = %u\n", get_pin_val(imu_int.pin, imu_int.port));
+}
+
+// Get feature request
+void get_feat_req(void) {
+    // Looking for "input report" for actual read sensor data
+    // "Get feature response" just tells the configuration of the sensor, not the actual read data
+    // "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
+    // Input reports, output reports, feature reports (#1 p.32-33)
+    // "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
+    // "Input reports may also be requested by the host at any time." (#1 p.32-33)
+    // Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
+    // Set feature command -> get feature response (should be R instead of W)
+
 }
