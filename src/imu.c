@@ -2,10 +2,27 @@
 IMU (Inertial Measurement Unit) library
 BNO080
 
+Datasheets:
+#0 (BNO080 Datasheet): https://cdn.sparkfun.com/assets/1/3/4/5/9/BNO080_Datasheet_v1.3.pdf
+    This is the main datasheet for the specific part itself
+#1 (SH-2 Reference Manual): https://cdn.sparkfun.com/assets/4/d/9/3/8/SH-2-Reference-Manual-v1.2.pdf
+    This is a supplementary document for the part itself, describing all the sensors and their message/report formats
+#2 (Sensor Hub Transport Protocol): https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
+    This document described the more general SHTP protocol, not specific to this part
+
 Based on SparkFun BNO080 Arduino library:
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.cpp
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.h
+
+Reference Driver Implementation: https://github.com/hcrest/bno080-driver
+
+Miscellanous Links:
+Breakout board hookup guide: https://learn.sparkfun.com/tutorials/qwiic-vr-imu-bno080-hookup-guide/all
+https://os.mbed.com/users/MultipleMonomials/code/BNO080/
+https://www.raspberrypi.org/forums/viewtopic.php?t=203550
+https://www.arduinolibraries.info/libraries/spark-fun-bno080-cortex-based-imu
+https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/5
 
 The IMU contains sensors including an accelerometer and gyroscope. We use it to
 collect ADCS data about the positioning and orientation of the satellite.
@@ -18,16 +35,7 @@ Most of the information is in the main datasheet, but there are supplementary
 documents with necessary informataion (indicated in the references of the main
 datasheet).
 
-#0 (BNO080 Datasheet): https://cdn.sparkfun.com/assets/1/3/4/5/9/BNO080_Datasheet_v1.3.pdf
-    This is the main datasheet for the specific part itself
-#1 (SH-2 Reference Manual): https://cdn.sparkfun.com/assets/4/d/9/3/8/SH-2-Reference-Manual-v1.2.pdf
-    This is a supplementary document for the part itself, describing all the sensors and their message/report formats
-#2 (Sensor Hub Transport Protocol): https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
-    This document described the more general SHTP protocol, not specific to this part
-
 One transmission to or from the IMU is referred to as a "packet", which is split up into the "header" and the "data".
-
-Reference Implementation: https://github.com/hcrest/bno080-driver
 
 SPI Interface - #0 p. 17-19
 CPOL = 1, CPHA = 1 (#0 p. 19)
@@ -51,7 +59,6 @@ Configure sensor to "normal" instead of "wakeup" (#1 p. 33)
 
 Cannot use one-shot trigger mode reporting, only continuous (#1 p.34-35)
 
-
 Currently used sensors (TODO):
 - accelerometer
 
@@ -70,6 +77,8 @@ TODO - when does the first interrupt occur?
 */
 
 #include "imu.h"
+
+#define PRINT_FUNC print("%s\n", __FUNCTION__);
 
 // CLKSEL0
 pin_info_t imu_clksel0 = {
@@ -123,12 +132,25 @@ uint8_t imu_seq_nums[6] = { 0 };
 uint8_t imu_header[IMU_HEADER_LEN] = { 0x00 };
 uint8_t imu_data[IMU_DATA_MAX_LEN] = { 0x00 };
 // Number of valid bytes in `imu_data`, NOT including the header
-uint8_t imu_data_len = 0;
+uint16_t imu_data_len = 0;
+
+// TODO - modify lib-common print_bytes, fix uint16_t bug for len/i
+void print_hex(uint8_t* data, uint16_t len) {
+    if (len == 0) {
+        return;
+    }
+    print("%.2x", data[0]);
+    for (uint16_t i = 1; i < len; i++) {
+        print(":%.2x", data[i]);
+    }
+    print("\n");
+}
 
 /*
 Initializes the IMU (#0 p. 43).
 */
 void init_imu(void) {
+    PRINT_FUNC
     // The protocol selection and boot pins are sampled during startup, so we
     // need to set them before reset
 
@@ -155,55 +177,65 @@ void init_imu(void) {
     sei();
 
     // Reset with the appropriate GPIO pin settings
-    print("Resetting IMU...\n");
     reset_imu();
     print("Done reset\n");
-    // TODO
-    _delay_ms(200);
+
+    // Set wake low then high (#0 p.19)
+    set_pin_low(imu_ps0_wake.pin, imu_ps0_wake.port);
+    wait_for_imu_int();
+    set_pin_high(imu_ps0_wake.pin, imu_ps0_wake.port);
+    print("Done wake\n");
 
     // Wait for INT to be asserted after reset (#0 p. 43)
     wait_for_imu_int();
-    // _delay_ms(200);
 
     // "A read from the BNO080 will return the initial SHTP advertisement
     // packet" (#0 p.43)
     // "On system startup, the SHTP control application will send its
     // full advertisement response, unsolicited, to the host." (#2 p.16)
     receive_and_discard_imu_packet();
-    // _delay_ms(200);
 
     // Initialize response
     // "An unsolicited response is also generated after startup." (#1 p.48)
     receive_and_discard_imu_packet();
-    // _delay_ms(200);
 
-    // receive_and_discard_imu_packet();
-    // // _delay_ms(200);
-    // receive_and_discard_imu_packet();
-    // receive_and_discard_imu_packet();
-    // receive_and_discard_imu_packet();
+    inf_loop_imu_receive();
 
-
-    // Request product ID (#0 p.23)
-    imu_data[0] = IMU_PRODUCT_ID_REQ;
-    imu_data[1] = 0x00; // reserved
-    imu_data_len = 2;
-    send_imu_packet(IMU_CONTROL);
-    // Get response
-    receive_and_discard_imu_packet();
-
-    // TODO - in SPI library, log all sent and received bytes
+    while (1) {
+        // req_imu_prod_id();
+        // Get response
+        receive_and_discard_imu_packet();
+    }
 }
 
 void reset_imu(void) {
+    PRINT_FUNC
     // Assert then deassert active low reset
     // TODO - what delay time?
     set_pin_low(imu_rst.pin, imu_rst.port);
     _delay_ms(10);
     set_pin_high(imu_rst.pin, imu_rst.port);
+    _delay_ms(10);
 }
 
+void inf_loop_imu_receive(void) {
+    while (1) {
+        receive_and_discard_imu_packet();
+    }
+}
+
+void req_imu_prod_id(void) {
+    // Request product ID (#0 p.23)
+    imu_data[0] = IMU_PRODUCT_ID_REQ;
+    imu_data[1] = 0x00; // reserved
+    imu_data_len = 2;
+    send_imu_packet(IMU_CONTROL);
+}
+
+
+
 void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
+    PRINT_FUNC
     imu_header[0] = length & 0xFF;
     imu_header[1] = (length >> 8) & 0xFF;
     imu_header[2] = channel;
@@ -211,10 +243,12 @@ void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
 }
 
 void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length) {
+    PRINT_FUNC
     // Concatenate length
     *length = (((uint16_t) imu_header[1]) << 8) | ((uint16_t) imu_header[0]);
     *channel = imu_header[2];
     *seq_num = imu_header[3];
+    print("length = %u, channel = %u, seq_num = %u\n", *length, *channel, *seq_num);
 }
 
 /*
@@ -223,6 +257,7 @@ channel - 0 to 5
 Returns - 1 for success, 0 for failure
 */
 uint8_t send_imu_packet(uint8_t channel) {
+    PRINT_FUNC
     if (channel >= IMU_CHANNEL_COUNT) {
         return 0;
     }
@@ -231,16 +266,16 @@ uint8_t send_imu_packet(uint8_t channel) {
 
     print("Sending IMU SPI:\n");
     print("Header: ");
-    print_bytes(imu_header, IMU_HEADER_LEN);
+    print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
-    print_bytes(imu_data, imu_data_len);
+    print_hex(imu_data, imu_data_len);
 
     // Set feature command (#1 p.55-56)
     start_imu_spi();
-    for (uint8_t i = 0; i < IMU_HEADER_LEN; i++) {
+    for (uint16_t i = 0; i < IMU_HEADER_LEN; i++) {
         send_spi(imu_header[i]);
     }
-    for (uint8_t i = 0; i < imu_data_len; i++) {
+    for (uint16_t i = 0; i < imu_data_len; i++) {
         send_spi(imu_data[i]);
     }
     end_imu_spi();
@@ -256,6 +291,7 @@ This function will populate `imu_header` and `imu_data`
 Returns - 1 for success, 0 for failure (either no interrupt or too long message for buffer)
 */
 uint8_t receive_imu_packet(void) {
+    PRINT_FUNC
     if (!wait_for_imu_int()) {
         return 0;
     }
@@ -265,38 +301,50 @@ uint8_t receive_imu_packet(void) {
     // Get header
     // Add this header length (should be length of cargo + header)
     // Note LSB first
-    for (uint8_t i = 0; i < IMU_HEADER_LEN; i++) {
+    for (uint16_t i = 0; i < IMU_HEADER_LEN; i++) {
         imu_header[i] = send_spi(0x00);
     }
     print("Received IMU SPI:\n");
-    print("Header: ");
-    print_bytes(imu_header, IMU_HEADER_LEN);
+    
     uint8_t channel = 0;
     uint8_t seq_num = 0;
     uint16_t length = 0;
     process_imu_header(&channel, &seq_num, &length);
     // TODO - check if seq_num is correct
 
+    // "A length of 65535 is an error. The remaining header and cargo bytes are ignored. This type of error may occur if there is a failure in the SPI or I2C peripheral." (#2 p.4-5)
+    if (length == 0xFFFF) {
+        print("Error: length is 0xFFFF\n");
+        end_imu_spi();
+        return 0;
+    }
+
     // MSB (bit 15) is used to indicate if the transfer is a continuation of the
     // previous transfer (not applicable for us)
     length &= ~_BV(15);
 
-    // Just in case of a malfunction, make length at least 4
+    // Check for a null header (#2 p.5)
     if (length < IMU_HEADER_LEN) {
-        length = IMU_HEADER_LEN;
+        print("Error: length too short\n");
+        end_imu_spi();
+        return 0;
     }
-
-    // Increment the sequence number for that channel
+    
+    // Increment the sequence number for that channel (if the channel number is valid)
     if (channel < IMU_CHANNEL_COUNT) {
         imu_seq_nums[channel]++;
     }
 
-    // Get data
-    // Subtract 4 bytes of header
+    // Subtract 4 bytes get length of data (without header)
     uint16_t data_len = length - IMU_HEADER_LEN;
+    print("data_len = %u\n", data_len);
+
+    // Read and store data
     imu_data_len = 0;
-    for (uint8_t i = 0; i < data_len; i++) {
-        uint8_t byte = send_spi(0x00);
+    for (uint16_t i = 0; i < data_len; i++) {
+        // Sending 0xFF, not sure why but the reference library does this in receivePacket()
+        uint8_t byte = send_spi(0xFF);
+        // Only store received data within the size of our buffer
         if (i < IMU_DATA_MAX_LEN) {
             imu_data[i] = byte;
             imu_data_len++;
@@ -305,12 +353,13 @@ uint8_t receive_imu_packet(void) {
 
     end_imu_spi();
 
+    print("Header: ");
+    print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
-    print_bytes(imu_data, imu_data_len);
+    print_hex(imu_data, imu_data_len);
 
     if (data_len > IMU_DATA_MAX_LEN) {
-        print("Received packet too long\n");
-        return 0;
+        print("Did not save entire packet\n");
     }
 
     return 1;
@@ -320,6 +369,7 @@ uint8_t receive_imu_packet(void) {
 Set feature command (#1 p.55-56)
 */
 uint8_t set_imu_feature(uint8_t feat_report_id) {
+    PRINT_FUNC
     imu_data[0] = IMU_SET_FEAT_CMD;
     imu_data[1] = feat_report_id;
     imu_data[2] = 0x00;
@@ -350,12 +400,11 @@ uint8_t set_imu_feature(uint8_t feat_report_id) {
 }
 
 uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
+    PRINT_FUNC
     // TODO - Q point?
     // Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
     // https://en.wikipedia.org/wiki/Q_(number_format)
     // TODO - m/s^2? change precision?
-
-    print("getting accel\n");
 
     if (!set_imu_feature(IMU_ACCEL)) {
         return 0;
@@ -407,7 +456,7 @@ uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
 Raw uncalibrated gyroscope (ADC units) (#1 p.59)
 */
 uint8_t get_imu_raw_gyro(uint16_t* x, uint16_t* y, uint16_t* z) {
-    print("getting raw gyro\n");
+    PRINT_FUNC
 
     if (!set_imu_feature(IMU_RAW_GYRO)) {
         return 0;
@@ -451,6 +500,7 @@ Non-drift-compensated rotational velocity
 "rotational velocity without drift compensation. An estimate of drift is also reported."
 */
 uint8_t get_imu_uncal_gyro(void) {
+    PRINT_FUNC
     return 1;
 }
 
@@ -459,6 +509,7 @@ Calibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
 Drift-compensated rotational velocity
 */
 uint8_t get_imu_cal_gyro(void) {
+    PRINT_FUNC
     return 1;
 }
 
@@ -470,8 +521,11 @@ TODO - how long does this take?
 Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
-    uint16_t timeout = UINT16_MAX;
+    PRINT_FUNC
+    // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
+    uint8_t timeout = UINT8_MAX;
     while (get_pin_val(imu_int.pin, imu_int.port) != 0 && timeout > 0) {
+        _delay_ms(1);
         timeout--;
     }
 
@@ -485,37 +539,39 @@ uint8_t wait_for_imu_int(void) {
 }
 
 void start_imu_spi(void) {
+    // PRINT_FUNC
     set_spi_cpol_cpha(1, 1);
     set_cs_low(imu_cs.pin, imu_cs.port);
 }
 
 void end_imu_spi(void) {
+    // PRINT_FUNC
     set_cs_high(imu_cs.pin, imu_cs.port);
     reset_spi_cpol_cpha();
 }
 
 uint8_t receive_and_discard_imu_packet(void) {
-    if (!receive_imu_packet()) {
-        return 0;
-    }
+    PRINT_FUNC
+    receive_imu_packet();
 
     print("Received packet\n");
     for (uint16_t i = 0; i < imu_data_len; i++) {
         put_uart_char(imu_data[i]);
     }
     put_uart_char('\n');
-    print_bytes(imu_data, imu_data_len);
+    // print_hex(imu_data, imu_data_len);
     
     return 1;
 }
 
 // INT2 interrupt from INTn pin
 ISR(INT2_vect) {
-    print("\nIMU INT: pin = %u\n", get_pin_val(imu_int.pin, imu_int.port));
+    // print("\nIMU INT: pin = %u\n", get_pin_val(imu_int.pin, imu_int.port));
 }
 
 // Get feature request
 void get_feat_req(void) {
+    PRINT_FUNC
     // Looking for "input report" for actual read sensor data
     // "Get feature response" just tells the configuration of the sensor, not the actual read data
     // "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)

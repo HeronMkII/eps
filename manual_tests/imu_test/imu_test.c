@@ -17,8 +17,6 @@ int main(void) {
     print("\n\n");
     print("Starting IMU test\n");
 
-
-    print_seq_nums();
     // This should initialize interrupts and receive the SHTP advertisement
     init_imu();
     print_seq_nums();
