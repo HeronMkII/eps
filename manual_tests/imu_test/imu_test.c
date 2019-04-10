@@ -10,6 +10,15 @@ void print_seq_nums(void) {
     }
 }
 
+void print_prod_id(void) {
+    if (!get_imu_prod_id()) {
+        print("Get product ID: FAIL\n");
+        return;
+    }
+
+    print("Get product ID: SUCCESS\n");
+}
+
 int main(void) {
     init_uart();
     init_spi();
@@ -20,6 +29,9 @@ int main(void) {
     // This should initialize interrupts and receive the SHTP advertisement
     init_imu();
     print_seq_nums();
+
+    print_prod_id();
+    inf_loop_imu_receive();
 
     uint8_t ret = 0;
     uint16_t accel_x = 0;

@@ -151,9 +151,36 @@ Initializes the IMU (#0 p. 43).
 */
 void init_imu(void) {
     PRINT_FUNC
+
     // The protocol selection and boot pins are sampled during startup, so we
     // need to set them before reset
+    init_imu_pins();
 
+    // Reset with the appropriate GPIO pin settings
+    reset_imu();
+
+    // Activate WAKE pin
+    wake_imu();
+
+    // Wait for INT to be asserted after reset (#0 p. 43)
+    wait_for_imu_int();
+
+    // "A read from the BNO080 will return the initial SHTP advertisement
+    // packet [...] Following the SHTP advertisement packet, the individual applications built in to the BNO080 will send a packet indicating they have left the reset state" (#0 p.43)
+    // "On system startup, the SHTP control application will send its
+    // full advertisement response, unsolicited, to the host." (#2 p.16)
+    receive_and_discard_imu_packet();
+
+    // "The executable will issue a reset message on SHTP channel 1" (#0 p.43)
+    receive_and_discard_imu_packet();
+
+    // Initialize response
+    // "SH-2 will issue an unsolicited initialization message on SHTP channel 2" (#0 p.43)
+    // "An unsolicited response is also generated after startup." (#1 p.48)
+    receive_and_discard_imu_packet();    
+}
+
+void init_imu_pins(void) {
     // CLKSEL0 = 0 (for crystal, #0 p.11)
     init_output_pin(imu_clksel0.pin, imu_clksel0.ddr, 0);
     // BOOTn = 1 (not bootloader mode, #0 p.9)
@@ -175,37 +202,13 @@ void init_imu(void) {
     EIMSK |= _BV(INT2);
     // enable global interrupts
     sei();
+}
 
-    // Reset with the appropriate GPIO pin settings
-    reset_imu();
-    print("Done reset\n");
-
+void wake_imu(void) {
     // Set wake low then high (#0 p.19)
     set_pin_low(imu_ps0_wake.pin, imu_ps0_wake.port);
     wait_for_imu_int();
     set_pin_high(imu_ps0_wake.pin, imu_ps0_wake.port);
-    print("Done wake\n");
-
-    // Wait for INT to be asserted after reset (#0 p. 43)
-    wait_for_imu_int();
-
-    // "A read from the BNO080 will return the initial SHTP advertisement
-    // packet" (#0 p.43)
-    // "On system startup, the SHTP control application will send its
-    // full advertisement response, unsolicited, to the host." (#2 p.16)
-    receive_and_discard_imu_packet();
-
-    // Initialize response
-    // "An unsolicited response is also generated after startup." (#1 p.48)
-    receive_and_discard_imu_packet();
-
-    inf_loop_imu_receive();
-
-    while (1) {
-        // req_imu_prod_id();
-        // Get response
-        receive_and_discard_imu_packet();
-    }
 }
 
 void reset_imu(void) {
@@ -224,12 +227,25 @@ void inf_loop_imu_receive(void) {
     }
 }
 
-void req_imu_prod_id(void) {
-    // Request product ID (#0 p.23)
-    imu_data[0] = IMU_PRODUCT_ID_REQ;
-    imu_data[1] = 0x00; // reserved
-    imu_data_len = 2;
-    send_imu_packet(IMU_CONTROL);
+uint8_t get_imu_prod_id(void) {
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
+        // Request product ID (#0 p.23)
+        imu_data[0] = IMU_PRODUCT_ID_REQ;
+        imu_data[1] = 0x00; // reserved
+        imu_data_len = 2;
+        send_imu_packet(IMU_CONTROL);
+
+        // Get response
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        // TODO - is this correct?
+        if (imu_data_len >= 16 && imu_data[0] == IMU_PRODUCT_ID_RESP) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 

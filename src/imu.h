@@ -37,13 +37,18 @@
 #define IMU_UNCAL_GYRO  0x07
 #define IMU_RAW_GYRO    0x15
 
+// Number of packets to receive for checking a response from the IMU
+#define IMU_PACKET_CHECK_COUNT 20
+
 
 extern uint8_t imu_seq_nums[];
 
 void init_imu(void);
+void init_imu_pins(void);
+void wake_imu(void);
 void reset_imu(void);
 void inf_loop_imu_receive(void);
-void req_imu_prod_id(void);
+uint8_t get_imu_prod_id(void);
 void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length);
 void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length);
 uint8_t send_imu_packet(uint8_t channel);
