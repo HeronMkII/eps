@@ -158,9 +158,11 @@ void init_imu(void) {
 
     // Reset with the appropriate GPIO pin settings
     reset_imu();
+    print("Done reset\n");
 
     // Activate WAKE pin
-    wake_imu();
+    // wake_imu();
+    // print("Done wake\n");
 
     // Wait for INT to be asserted after reset (#0 p. 43)
     wait_for_imu_int();
@@ -191,13 +193,14 @@ void init_imu_pins(void) {
     init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
     // CSn = 1
     init_cs(imu_cs.pin, imu_cs.ddr);
+    set_cs_high(imu_cs.pin, imu_cs.port);
     // Interrupt input
     init_input_pin(imu_int.pin, imu_int.ddr);
 
     // Enable interrupts
-    // set behaviour of INT2 to trigger on falling edge (p.84)
-    EICRA |= _BV(ISC21);
-    EICRA &= ~_BV(ISC20);
+    // set behaviour of INT2 to trigger on any logical change (falling or rising edge) (p.84)
+    EICRA &= ~_BV(ISC21);
+    EICRA |= _BV(ISC20);
     // enable external interrupt 2
     EIMSK |= _BV(INT2);
     // enable global interrupts
@@ -277,6 +280,10 @@ uint8_t send_imu_packet(uint8_t channel) {
     if (channel >= IMU_CHANNEL_COUNT) {
         return 0;
     }
+    // TODO ?
+    if (!wait_for_imu_int()) {
+        return 0;
+    }
 
     populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
 
@@ -313,7 +320,7 @@ uint8_t receive_imu_packet(void) {
     }
 
     start_imu_spi();
-    
+
     // Get header
     // Add this header length (should be length of cargo + header)
     // Note LSB first
@@ -346,10 +353,7 @@ uint8_t receive_imu_packet(void) {
         return 0;
     }
     
-    // Increment the sequence number for that channel (if the channel number is valid)
-    if (channel < IMU_CHANNEL_COUNT) {
-        imu_seq_nums[channel]++;
-    }
+    // According to the reference library, we don't increment our sequence number when receiving packets
 
     // Subtract 4 bytes get length of data (without header)
     uint16_t data_len = length - IMU_HEADER_LEN;
@@ -373,6 +377,12 @@ uint8_t receive_imu_packet(void) {
     print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
     print_hex(imu_data, imu_data_len);
+
+    // Print data as string
+    for (uint16_t i = 0; i < imu_data_len; i++) {
+        put_uart_char(imu_data[i]);
+    }
+    put_uart_char('\n');
 
     if (data_len > IMU_DATA_MAX_LEN) {
         print("Did not save entire packet\n");
@@ -538,9 +548,11 @@ Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
     PRINT_FUNC
+    // while (get_imu_int() == 0) {}
     // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
+    // TODO - fix get_pin_val() in lib-common
     uint8_t timeout = UINT8_MAX;
-    while (get_pin_val(imu_int.pin, imu_int.port) != 0 && timeout > 0) {
+    while (get_imu_int() != 0 && timeout > 0) {
         _delay_ms(1);
         timeout--;
     }
@@ -550,7 +562,7 @@ uint8_t wait_for_imu_int(void) {
         return 0;
     }
 
-    print("Successful INT\n");
+    print("Successful INT: timeout = %u\n", timeout);
     return 1;
 }
 
@@ -568,21 +580,22 @@ void end_imu_spi(void) {
 
 uint8_t receive_and_discard_imu_packet(void) {
     PRINT_FUNC
-    receive_imu_packet();
-
-    print("Received packet\n");
-    for (uint16_t i = 0; i < imu_data_len; i++) {
-        put_uart_char(imu_data[i]);
+    if (!receive_imu_packet()) {
+        print("Receive packet: FAIL\n");
+        return 0;
     }
-    put_uart_char('\n');
-    // print_hex(imu_data, imu_data_len);
-    
+
+    print("Receive packet: SUCCESS\n");
     return 1;
+}
+
+uint8_t get_imu_int(void) {
+    return (PINB & _BV(5)) ? 1 : 0;
 }
 
 // INT2 interrupt from INTn pin
 ISR(INT2_vect) {
-    // print("\nIMU INT: pin = %u\n", get_pin_val(imu_int.pin, imu_int.port));
+    // print("\nINT2: pin = %u (%.2x)\n", get_imu_int(), PINB);
 }
 
 // Get feature request
@@ -598,3 +611,12 @@ void get_feat_req(void) {
     // Set feature command -> get feature response (should be R instead of W)
 
 }
+
+// TODO
+// "Note that the BNO080 also provides a timebase reference report with sensor reports:" (#0 p.28)
+
+// TODO !! - check for deassert and reassert INTn
+// "HINT may be deasserted at any time after the read begins, including after the transaction is complete." (#2 p.6)
+// e.g. wait_for_imu_int_low() and wait_for_imu_int_high(), or wait_for_imu_int(0/1)
+// e.g. do transaction, wait for INT high
+// e.g. before read, wait for INT high then low

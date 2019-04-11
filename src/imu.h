@@ -10,7 +10,7 @@
 // 4 bytes in all headers
 #define IMU_HEADER_LEN 4
 // Max number of bytes to support in data (not including header)
-#define IMU_DATA_MAX_LEN 30
+#define IMU_DATA_MAX_LEN 20
 
 // Channels (#0 p.22)
 #define IMU_CHANNEL_COUNT   6 // total number of channels
@@ -60,5 +60,6 @@ void end_imu_spi(void);
 void send_imu_header(uint16_t length, uint8_t channel);
 void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num);
 uint8_t receive_and_discard_imu_packet(void);
+uint8_t get_imu_int(void);
 
 #endif

@@ -30,7 +30,9 @@ int main(void) {
     init_imu();
     print_seq_nums();
 
-    print_prod_id();
+    while (1) {
+        print_prod_id();
+    }
     inf_loop_imu_receive();
 
     uint8_t ret = 0;
