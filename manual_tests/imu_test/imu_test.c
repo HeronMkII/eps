@@ -11,12 +11,26 @@ void print_seq_nums(void) {
 }
 
 void print_prod_id(void) {
+    print("\nGetting product ID...\n\n");
+
     if (!get_imu_prod_id()) {
-        print("Get product ID: FAIL\n");
+        print("\nGet product ID: FAIL\n\n");
         return;
     }
 
-    print("Get product ID: SUCCESS\n");
+    print("\nGet product ID: SUCCESS\n\n");
+}
+
+void test_accel(void) {
+    print("\nGetting acceleration...\n\n");
+
+    uint16_t x, y, z;
+    if (!get_imu_accel(&x, &y, &z)) {
+        print("\nGet acceleration: FAIL\n\n");
+        return;
+    }
+
+    print("\nGet acceleration: SUCCESS\n\n");
 }
 
 int main(void) {
@@ -30,9 +44,9 @@ int main(void) {
     init_imu();
     print_seq_nums();
 
-    while (1) {
-        print_prod_id();
-    }
+    print_prod_id();
+    test_accel();
+
     inf_loop_imu_receive();
 
     uint8_t ret = 0;

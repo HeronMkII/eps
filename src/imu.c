@@ -165,7 +165,7 @@ void init_imu(void) {
     // print("Done wake\n");
 
     // Wait for INT to be asserted after reset (#0 p. 43)
-    wait_for_imu_int();
+    // wait_for_imu_int();
 
     // "A read from the BNO080 will return the initial SHTP advertisement
     // packet [...] Following the SHTP advertisement packet, the individual applications built in to the BNO080 will send a packet indicating they have left the reset state" (#0 p.43)
@@ -187,16 +187,21 @@ void init_imu_pins(void) {
     init_output_pin(imu_clksel0.pin, imu_clksel0.ddr, 0);
     // BOOTn = 1 (not bootloader mode, #0 p.9)
     init_output_pin(imu_boot.pin, imu_boot.ddr, 1);
-    // PS0 = 1 (#0 p.9) - PS1 = 1 already in hardware
-    init_output_pin(imu_ps0_wake.pin, imu_ps0_wake.ddr, 1);
-    // RSTn = 1 (#0 p.10)
-    init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
     // CSn = 1
     init_cs(imu_cs.pin, imu_cs.ddr);
     set_cs_high(imu_cs.pin, imu_cs.port);
+    // PS0 = 1 (#0 p.9) - not using WAKE yet
+    // in hardware, PS1 = 1
+    init_output_pin(imu_ps0_wake.pin, imu_ps0_wake.ddr, 1);
     // Interrupt input
     init_input_pin(imu_int.pin, imu_int.ddr);
-
+    // TODO - does it need input pullup?
+    // configure input pullup resistor (14.2.1, p.95)
+    PORTB |= _BV(5);
+    print("PORTB = %.2x\n", PORTB);
+    // RSTn = 1 (#0 p.10)
+    init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
+    
     // Enable interrupts
     // set behaviour of INT2 to trigger on any logical change (falling or rising edge) (p.84)
     EICRA &= ~_BV(ISC21);
@@ -219,9 +224,8 @@ void reset_imu(void) {
     // Assert then deassert active low reset
     // TODO - what delay time?
     set_pin_low(imu_rst.pin, imu_rst.port);
-    _delay_ms(10);
+    _delay_ms(2);
     set_pin_high(imu_rst.pin, imu_rst.port);
-    _delay_ms(10);
 }
 
 void inf_loop_imu_receive(void) {
@@ -420,7 +424,7 @@ uint8_t set_imu_feature(uint8_t feat_report_id) {
     }
 
     // TODO - get feature response?
-    receive_and_discard_imu_packet();
+    // receive_and_discard_imu_packet();
 
     return 1;
 }
@@ -436,16 +440,13 @@ uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
         return 0;
     }
 
-    // Try 10 packets
-    // TODO - what timeout/number?
-    for (uint8_t i = 0; i < 10; i++) {
-        _delay_ms(100);
-
+    // Try multiple packets
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
         if (!receive_imu_packet()) {
             continue;
         }
         // TODO - does this contain the timebase reference? does that only apply to batching? are we using batching? (#0 p.44, #1 p.79)
-        if (imu_data_len != 10) {
+        if (imu_data_len < 10) {
             continue;
         }
         if (imu_data[0] != IMU_ACCEL) {
