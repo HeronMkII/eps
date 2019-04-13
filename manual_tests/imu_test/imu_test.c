@@ -37,17 +37,19 @@ int main(void) {
     init_uart();
     init_spi();
 
+    // Use faster UART to interfere less with timing
+    set_uart_baud_rate(UART_BAUD_115200);
+
     print("\n\n");
     print("Starting IMU test\n");
 
     // This should initialize interrupts and receive the SHTP advertisement
     init_imu();
-    print_seq_nums();
+    inf_loop_imu_receive();
 
+    print_seq_nums();
     print_prod_id();
     test_accel();
-
-    inf_loop_imu_receive();
 
     uint8_t ret = 0;
     uint16_t accel_x = 0;

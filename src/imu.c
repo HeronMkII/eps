@@ -15,14 +15,25 @@ https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.cpp
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.h
 
-Reference Driver Implementation: https://github.com/hcrest/bno080-driver
+Other Library/Driver Implementations:
+https://github.com/hcrest/bno080-driver
+https://os.mbed.com/users/MultipleMonomials/code/BNO080/
+https://github.com/BBUK/Bell-Boy
+https://github.com/jps2000/BNO080
+http://www.itpcs.cn/github_/fm4dd/pi-bno080
+https://github.com/williamg42/BNO080-Linux-Library
+https://github.com/fm4dd/pi-bno080
+https://github.com/josepmcgrath/imu_i2c
 
 Miscellanous Links:
 Breakout board hookup guide: https://learn.sparkfun.com/tutorials/qwiic-vr-imu-bno080-hookup-guide/all
-https://os.mbed.com/users/MultipleMonomials/code/BNO080/
 https://www.raspberrypi.org/forums/viewtopic.php?t=203550
 https://www.arduinolibraries.info/libraries/spark-fun-bno080-cortex-based-imu
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/5
+https://github.com/hcrest/bno080-nucleo-demo/issues/6
+https://www.raspberrypi.org/forums/viewtopic.php?t=196310
+https://github.com/fm4dd/pi-bno080/blob/master/issues.md
+
 
 The IMU contains sensors including an accelerometer and gyroscope. We use it to
 collect ADCS data about the positioning and orientation of the satellite.
@@ -152,6 +163,11 @@ Initializes the IMU (#0 p. 43).
 void init_imu(void) {
     PRINT_FUNC
 
+    // TODO
+    set_spi_cpol_cpha(1, 1);
+    // BNO080 supports up to 3MHz, use 2MHz
+    set_spi_clk_freq(SPI_FOSC_4);
+
     // The protocol selection and boot pins are sampled during startup, so we
     // need to set them before reset
     init_imu_pins();
@@ -159,6 +175,26 @@ void init_imu(void) {
     // Reset with the appropriate GPIO pin settings
     reset_imu();
     print("Done reset\n");
+
+    // TODO - soft reset??
+
+    // while (1) {
+    //     // print("PINB = %.2x\n", PINB);
+    //     while (get_imu_int()) {}
+    //     print("PINB = %.2x\n", PINB);
+    //     start_imu_spi();
+    //     for (uint16_t i = 0; i < 276; i++) {
+    //         uint8_t x = send_spi(0x00);
+    //         print("%.2x:", x);
+    //         // put_uart_char(x);
+    //     }
+    //     // print("\n\n");
+    //     put_uart_char('\n');
+    //     put_uart_char('\n');
+        
+    //     end_imu_spi();
+    //     print("done SPI\n");
+    // }
 
     // Activate WAKE pin
     // wake_imu();
@@ -179,7 +215,7 @@ void init_imu(void) {
     // Initialize response
     // "SH-2 will issue an unsolicited initialization message on SHTP channel 2" (#0 p.43)
     // "An unsolicited response is also generated after startup." (#1 p.48)
-    receive_and_discard_imu_packet();    
+    receive_and_discard_imu_packet();
 }
 
 void init_imu_pins(void) {
@@ -323,6 +359,8 @@ uint8_t receive_imu_packet(void) {
         return 0;
     }
 
+    print("Received IMU SPI:\n");
+
     start_imu_spi();
 
     // Get header
@@ -331,7 +369,6 @@ uint8_t receive_imu_packet(void) {
     for (uint16_t i = 0; i < IMU_HEADER_LEN; i++) {
         imu_header[i] = send_spi(0x00);
     }
-    print("Received IMU SPI:\n");
     
     uint8_t channel = 0;
     uint8_t seq_num = 0;
@@ -569,14 +606,14 @@ uint8_t wait_for_imu_int(void) {
 
 void start_imu_spi(void) {
     // PRINT_FUNC
-    set_spi_cpol_cpha(1, 1);
+    // set_spi_cpol_cpha(1, 1);
     set_cs_low(imu_cs.pin, imu_cs.port);
 }
 
 void end_imu_spi(void) {
     // PRINT_FUNC
     set_cs_high(imu_cs.pin, imu_cs.port);
-    reset_spi_cpol_cpha();
+    // reset_spi_cpol_cpha();
 }
 
 uint8_t receive_and_discard_imu_packet(void) {
