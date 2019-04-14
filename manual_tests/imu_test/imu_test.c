@@ -64,6 +64,7 @@ void test_accel_once(void) {
 void test_accel_inf(void) {
     while (1) {
         test_accel_once();
+        _delay_ms(200);
     }
 }
 

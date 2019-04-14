@@ -79,17 +79,16 @@ The PS1 port is permanently tied to VCC (1). The PS0/WAKE port is tied to a GPIO
 
 NOTE: Protocol sends LSB first, MSB after
 
-TODO - H_INTN, PS0/WAKE (#0 p. 18)
-TODO - check wake from sleep (#0 p. 19)
 TODO - sensor calibration
 TODO - sensor metadata - FRS read operation (#1 p. 29)
-
-TODO - when does the first interrupt occur?
 */
 
 #include "imu.h"
 
 #define PRINT_FUNC print("%s\n", __FUNCTION__);
+
+// Comment out this line to disable debugging print statements (sent/received packets)
+#define IMU_DEBUG
 
 // CLKSEL0
 pin_info_t imu_clksel0 = {
@@ -161,47 +160,12 @@ void print_hex(uint8_t* data, uint16_t len) {
 Initializes the IMU (#0 p. 43).
 */
 void init_imu(void) {
-    PRINT_FUNC
-
-    // TODO
-    set_spi_cpol_cpha(1, 1);
-    // BNO080 supports up to 3MHz, use 2MHz
-    set_spi_clk_freq(SPI_FOSC_4);
-
     // The protocol selection and boot pins are sampled during startup, so we
     // need to set them before reset
     init_imu_pins();
 
     // Reset with the appropriate GPIO pin settings
     reset_imu();
-    print("Done reset\n");
-
-    // TODO - soft reset??
-
-    // while (1) {
-    //     // print("PINB = %.2x\n", PINB);
-    //     while (get_imu_int()) {}
-    //     print("PINB = %.2x\n", PINB);
-    //     start_imu_spi();
-    //     for (uint16_t i = 0; i < 276; i++) {
-    //         uint8_t x = send_spi(0x00);
-    //         print("%.2x:", x);
-    //         // put_uart_char(x);
-    //     }
-    //     // print("\n\n");
-    //     put_uart_char('\n');
-    //     put_uart_char('\n');
-        
-    //     end_imu_spi();
-    //     print("done SPI\n");
-    // }
-
-    // Activate WAKE pin
-    // wake_imu();
-    // print("Done wake\n");
-
-    // Wait for INT to be asserted after reset (#0 p. 43)
-    // wait_for_imu_int();
 
     // "A read from the BNO080 will return the initial SHTP advertisement
     // packet [...] Following the SHTP advertisement packet, the individual applications built in to the BNO080 will send a packet indicating they have left the reset state" (#0 p.43)
@@ -231,10 +195,8 @@ void init_imu_pins(void) {
     init_output_pin(imu_ps0_wake.pin, imu_ps0_wake.ddr, 1);
     // Interrupt input
     init_input_pin(imu_int.pin, imu_int.ddr);
-    // TODO - does it need input pullup?
     // configure input pullup resistor (14.2.1, p.95)
     PORTB |= _BV(5);
-    print("PORTB = %.2x\n", PORTB);
     // RSTn = 1 (#0 p.10)
     init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
     
@@ -249,9 +211,8 @@ void init_imu_pins(void) {
 }
 
 void reset_imu(void) {
-    PRINT_FUNC
     // Assert then deassert active low reset
-    // TODO - what delay time?
+    // Not in datasheet, but use 2ms to match the reference library
     set_pin_low(imu_rst.pin, imu_rst.port);
     _delay_ms(2);
     set_pin_high(imu_rst.pin, imu_rst.port);
@@ -270,13 +231,9 @@ uint8_t get_imu_int(void) {
 
 /*
 Waits until the interrupt pin goes low.
-TODO - return timeout and success value
-TODO - how long does this take?
 Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
-    PRINT_FUNC
-    // while (get_imu_int() == 0) {}
     // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
     // TODO - fix get_pin_val() in lib-common
     uint8_t timeout = UINT8_MAX;
@@ -286,33 +243,33 @@ uint8_t wait_for_imu_int(void) {
     }
 
     if (timeout == 0) {
-        print("Failed INT\n");
+        // print("Failed INT\n");
         return 0;
     }
 
-    print("Successful INT: timeout = %u\n", timeout);
+    // print("Successful INT: timeout = %u\n", timeout);
     return 1;
 }
 
 void start_imu_spi(void) {
-    // PRINT_FUNC
-    // set_spi_cpol_cpha(1, 1);
+    // Need to use SPI mode 3 (CPOL = 1, CPHA = 1)
+    set_spi_cpol_cpha(1, 1);
+    // BNO080 supports up to 3MHz, our clock division only allows 2MHz
+    set_spi_clk_freq(SPI_FOSC_4);
     set_cs_low(imu_cs.pin, imu_cs.port);
 }
 
 void end_imu_spi(void) {
-    // PRINT_FUNC
     set_cs_high(imu_cs.pin, imu_cs.port);
-    // reset_spi_cpol_cpha();
+    reset_spi_clk_freq();
+    reset_spi_cpol_cpha();
 }
 
 void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length) {
-    PRINT_FUNC
     // Concatenate length
     *length = (((uint16_t) imu_header[1]) << 8) | ((uint16_t) imu_header[0]);
     *channel = imu_header[2];
     *seq_num = imu_header[3];
-    print("length = %u, channel = %u, seq_num = %u\n", *length, *channel, *seq_num);
 }
 
 /*
@@ -320,12 +277,9 @@ This function will populate `imu_header` and `imu_data`
 Returns - 1 for success, 0 for failure (either no interrupt or too long message for buffer)
 */
 uint8_t receive_imu_packet(void) {
-    PRINT_FUNC
     if (!wait_for_imu_int()) {
         return 0;
     }
-
-    print("Received IMU SPI:\n");
 
     start_imu_spi();
 
@@ -341,10 +295,17 @@ uint8_t receive_imu_packet(void) {
     uint16_t length = 0;
     process_imu_header(&channel, &seq_num, &length);
 
+#ifdef IMU_DEBUG
+    print("Received IMU SPI:\n");
+    print("length = %u, channel = %u, seq_num = %u\n", length, channel, seq_num);
+#endif
+
     // "A length of 65535 is an error. The remaining header and cargo bytes are ignored. This type of error may occur if there is a failure in the SPI or I2C peripheral." (#2 p.4-5)
     if (length == 0xFFFF) {
         end_imu_spi();
+#ifdef IMU_DEBUG
         print("Error: length is 0xFFFF\n");
+#endif
         return 0;
     }
 
@@ -355,7 +316,9 @@ uint8_t receive_imu_packet(void) {
     // Check for a null header (#2 p.5)
     if (length < IMU_HEADER_LEN) {
         end_imu_spi();
+#ifdef IMU_DEBUG
         print("Error: null header\n");
+#endif
         return 0;
     }
     
@@ -378,6 +341,7 @@ uint8_t receive_imu_packet(void) {
 
     end_imu_spi();
 
+#ifdef IMU_DEBUG
     print("data_len = %u\n", data_len);
     print("Header: ");
     print_hex(imu_header, IMU_HEADER_LEN);
@@ -385,20 +349,20 @@ uint8_t receive_imu_packet(void) {
     print_hex(imu_data, imu_data_len);
 
     // Print data as string
-    for (uint16_t i = 0; i < imu_data_len; i++) {
-        put_uart_char(imu_data[i]);
-    }
-    put_uart_char('\n');
+    // for (uint16_t i = 0; i < imu_data_len; i++) {
+    //     put_uart_char(imu_data[i]);
+    // }
+    // put_uart_char('\n');
 
     if (data_len > IMU_DATA_MAX_LEN) {
         print("Did not save entire packet\n");
     }
+#endif
 
     return 1;
 }
 
 void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
-    PRINT_FUNC
     imu_header[0] = length & 0xFF;
     imu_header[1] = (length >> 8) & 0xFF;
     imu_header[2] = channel;
@@ -411,7 +375,6 @@ channel - 0 to 5
 Returns - 1 for success, 0 for failure
 */
 uint8_t send_imu_packet(uint8_t channel) {
-    PRINT_FUNC
     if (channel >= IMU_CHANNEL_COUNT) {
         return 0;
     }
@@ -424,11 +387,13 @@ uint8_t send_imu_packet(uint8_t channel) {
 
     populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
 
+#ifdef IMU_DEBUG
     print("Sending IMU SPI:\n");
     print("Header: ");
     print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
     print_hex(imu_data, imu_data_len);
+#endif
 
     // Set feature command (#1 p.55-56)
     start_imu_spi();
@@ -477,8 +442,6 @@ Set feature command (#1 p.55-56)
 report_interval - in microseconds
 */
 uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval) {
-    PRINT_FUNC
-
     imu_data[0] = IMU_SET_FEAT_CMD;
     imu_data[1] = feat_report_id;
     imu_data[2] = 0x00;
@@ -530,21 +493,22 @@ uint8_t disable_imu_feat(uint8_t feat_report_id) {
 }
 
 /*
-Uses Q point, similar to reference library qToFloat()
+Converts the raw 16-bit signed fixed-point value from the input report to the actual floating-point measurement using the Q point.
+Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
+https://en.wikipedia.org/wiki/Q_(number_format)
+Similar to reference library qToFloat()
+raw_data - 16 bit raw value
+q_point - number of binary digits to shift
 */
 double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
-    return ((double) raw_data) * pow(2, -q_point);
+    // Implement power of 2 with a bitshift instead of pow(), which links to the
+    // math library and increases the binary size by ~1.3kB
+    return ((double) raw_data) / ((double) (1 << q_point));
 }
 
 // x, y, z are signed fixed-point
 // "The units are m/s^2. The Q point is 8." (#1 p.58)
 uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
-    PRINT_FUNC
-    // TODO - Q point?
-    // Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
-    // https://en.wikipedia.org/wiki/Q_(number_format)
-    // TODO - m/s^2? change precision?
-
     // Send set feature command, receive get feature response
     if (!enable_imu_feat(IMU_ACCEL)) {
         return 0;
@@ -600,54 +564,11 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
 // https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
 
 /*
-Raw uncalibrated gyroscope (ADC units) (#1 p.59)
-*/
-uint8_t get_imu_raw_gyro(uint16_t* x, uint16_t* y, uint16_t* z) {
-    PRINT_FUNC
-
-    if (!enable_imu_feat(IMU_RAW_GYRO)) {
-        return 0;
-    }
-
-    // Try 10 packets
-    // TODO - what timeout/number?
-    for (uint8_t i = 0; i < 10; i++) {
-        _delay_ms(100);
-
-        if (!receive_imu_packet()) {
-            continue;
-        }
-        // TODO - does this contain the timebase reference? does that only apply to batching? are we using batching? (#0 p.44, #1 p.79)
-        if (imu_data_len != 16) {
-            continue;
-        }
-        if (imu_data[0] != IMU_RAW_GYRO) {
-            continue;
-        }
-
-        if (x != NULL) {
-            *x = (((uint16_t) imu_data[5]) << 8) | ((uint16_t) imu_data[4]);
-        }
-        if (y != NULL) {
-            *y = (((uint16_t) imu_data[7]) << 8) | ((uint16_t) imu_data[6]);
-        }
-        if (z != NULL) {
-            *z = (((uint16_t) imu_data[9]) << 8) | ((uint16_t) imu_data[8]);
-        }
-
-        return 1;
-    }
-
-    return 0;
-}
-
-/*
 Uncalibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
 Non-drift-compensated rotational velocity
 "rotational velocity without drift compensation. An estimate of drift is also reported."
 */
 uint8_t get_imu_uncal_gyro(void) {
-    PRINT_FUNC
     return 1;
 }
 
@@ -656,7 +577,6 @@ Calibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
 Drift-compensated rotational velocity
 */
 uint8_t get_imu_cal_gyro(void) {
-    PRINT_FUNC
     return 1;
 }
 
@@ -678,7 +598,6 @@ ISR(INT2_vect) {
 // TODO
 // "Note that the BNO080 also provides a timebase reference report with sensor reports:" (#0 p.28)
 
-// TODO !! - check for deassert and reassert INTn
 // "HINT may be deasserted at any time after the read begins, including after the transaction is complete." (#2 p.6)
 // e.g. wait_for_imu_int_low() and wait_for_imu_int_high(), or wait_for_imu_int(0/1)
 // e.g. do transaction, wait for INT high
