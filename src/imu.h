@@ -41,6 +41,9 @@
 // Q points
 #define IMU_ACCEL_Q 8
 
+// Default report inteval (60ms, in microseconds)
+#define IMU_DEF_REPORT_INTERVAL 0x0000EA60
+
 // Number of packets to receive for checking a response from the IMU
 #define IMU_PACKET_CHECK_COUNT 20
 
@@ -58,6 +61,9 @@ void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length);
 uint8_t send_imu_packet(uint8_t channel);
 uint8_t receive_imu_packet(void);
 double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point);
+uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval);
+uint8_t enable_imu_feat(uint8_t feat_report_id);
+uint8_t disable_imu_feat(uint8_t feat_report_id);
 uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z);
 uint8_t wait_for_imu_int(void);
 void start_imu_spi(void);

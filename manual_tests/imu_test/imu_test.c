@@ -42,7 +42,7 @@ void test_prod_id(void) {
     print("\nGet product ID: SUCCESS\n\n");
 }
 
-void test_accel(void) {
+void test_accel_once(void) {
     print("\nGetting acceleration...\n\n");
 
     int16_t x = 0, y = 0, z = 0;
@@ -59,6 +59,12 @@ void test_accel(void) {
         imu_raw_data_to_double(y, IMU_ACCEL_Q),
         imu_raw_data_to_double(z, IMU_ACCEL_Q));
     print("\n");
+}
+
+void test_accel_inf(void) {
+    while (1) {
+        test_accel_once();
+    }
 }
 
 int main(void) {
@@ -78,10 +84,7 @@ int main(void) {
     test_seq_nums();
     test_prod_id();
     receive_and_print_packets(5);
-    while (1) {
-        test_accel();
-        receive_and_print_packets(5);
-    }
+    test_accel_inf();
 
     inf_loop_receive_and_print_packets();
     print("Done, looping...\n");

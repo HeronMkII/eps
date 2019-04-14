@@ -442,8 +442,10 @@ double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
 
 /*
 Set feature command (#1 p.55-56)
+"Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off." (#1 p.33)
+report_interval - in microseconds
 */
-uint8_t set_imu_feature(uint8_t feat_report_id) {
+uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval) {
     PRINT_FUNC
 
     imu_data[0] = IMU_SET_FEAT_CMD;
@@ -451,11 +453,10 @@ uint8_t set_imu_feature(uint8_t feat_report_id) {
     imu_data[2] = 0x00;
     imu_data[3] = 0x00;
     imu_data[4] = 0x00;
-    // TODO - for now, 60,000us report interval (this is in microseconds)
-    imu_data[5] = 0x60;
-    imu_data[6] = 0xEA;
-    imu_data[7] = 0x00;
-    imu_data[8] = 0x00;
+    imu_data[5] = report_interval & 0xFF;
+    imu_data[6] = (report_interval >> 8) & 0xFF;
+    imu_data[7] = (report_interval >> 16) & 0xFF;
+    imu_data[8] = (report_interval >> 24) & 0xFF;
     imu_data[9] = 0x00;
     imu_data[10] = 0x00;
     imu_data[11] = 0x00;
@@ -489,6 +490,14 @@ uint8_t set_imu_feature(uint8_t feat_report_id) {
     return 0;
 }
 
+uint8_t enable_imu_feat(uint8_t feat_report_id) {
+    return send_imu_set_feat_cmd(feat_report_id, IMU_DEF_REPORT_INTERVAL);
+}
+
+uint8_t disable_imu_feat(uint8_t feat_report_id) {
+    return send_imu_set_feat_cmd(feat_report_id, 0);
+}
+
 // x, y, z are signed fixed-point
 // "The units are m/s^2. The Q point is 8." (#1 p.58)
 uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
@@ -499,7 +508,7 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
     // TODO - m/s^2? change precision?
 
     // Send set feature command, receive get feature response
-    if (!set_imu_feature(IMU_ACCEL)) {
+    if (!enable_imu_feat(IMU_ACCEL)) {
         return 0;
     }
 
@@ -529,6 +538,13 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
         if (z != NULL) {
             *z = (((uint16_t) imu_data[14]) << 8) | ((uint16_t) imu_data[13]);
         }
+
+        // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
+        // Send set feature command, receive get feature response
+        if (!disable_imu_feat(IMU_ACCEL)) {
+            return 0;
+        }
+
         return 1;
     }
 
@@ -551,7 +567,7 @@ Raw uncalibrated gyroscope (ADC units) (#1 p.59)
 uint8_t get_imu_raw_gyro(uint16_t* x, uint16_t* y, uint16_t* z) {
     PRINT_FUNC
 
-    if (!set_imu_feature(IMU_RAW_GYRO)) {
+    if (!enable_imu_feat(IMU_RAW_GYRO)) {
         return 0;
     }
 
