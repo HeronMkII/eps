@@ -207,15 +207,15 @@ void init_imu(void) {
     // packet [...] Following the SHTP advertisement packet, the individual applications built in to the BNO080 will send a packet indicating they have left the reset state" (#0 p.43)
     // "On system startup, the SHTP control application will send its
     // full advertisement response, unsolicited, to the host." (#2 p.16)
-    receive_and_discard_imu_packet();
+    receive_imu_packet();
 
     // "The executable will issue a reset message on SHTP channel 1" (#0 p.43)
-    receive_and_discard_imu_packet();
+    receive_imu_packet();
 
     // Initialize response
     // "SH-2 will issue an unsolicited initialization message on SHTP channel 2" (#0 p.43)
     // "An unsolicited response is also generated after startup." (#1 p.48)
-    receive_and_discard_imu_packet();
+    receive_imu_packet();
 }
 
 void init_imu_pins(void) {
@@ -264,12 +264,11 @@ void reset_imu(void) {
     set_pin_high(imu_rst.pin, imu_rst.port);
 }
 
-void inf_loop_imu_receive(void) {
-    while (1) {
-        receive_and_discard_imu_packet();
-    }
-}
 
+
+/*
+It seems that after sending the request, first we receive a 16-byte packet (assumed as the overall system ID), followed by a separate (but not continued) 48-byte packet (assumed as the subsystem IDs).
+*/
 uint8_t get_imu_prod_id(void) {
     for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
         // Request product ID (#0 p.23)
@@ -282,8 +281,9 @@ uint8_t get_imu_prod_id(void) {
         if (!receive_imu_packet()) {
             continue;
         }
-        // TODO - is this correct?
         if (imu_data_len >= 16 && imu_data[0] == IMU_PRODUCT_ID_RESP) {
+            // Receive 48-byte packet for subsystems (don't care about contents)
+            receive_imu_packet();
             return 1;
         }
     }
@@ -320,7 +320,9 @@ uint8_t send_imu_packet(uint8_t channel) {
     if (channel >= IMU_CHANNEL_COUNT) {
         return 0;
     }
-    // TODO ?
+    
+    // Need to assert the wake signal first or else we never receive the interrupt
+    wake_imu();
     if (!wait_for_imu_int()) {
         return 0;
     }
@@ -374,12 +376,11 @@ uint8_t receive_imu_packet(void) {
     uint8_t seq_num = 0;
     uint16_t length = 0;
     process_imu_header(&channel, &seq_num, &length);
-    // TODO - check if seq_num is correct
 
     // "A length of 65535 is an error. The remaining header and cargo bytes are ignored. This type of error may occur if there is a failure in the SPI or I2C peripheral." (#2 p.4-5)
     if (length == 0xFFFF) {
-        print("Error: length is 0xFFFF\n");
         end_imu_spi();
+        print("Error: length is 0xFFFF\n");
         return 0;
     }
 
@@ -389,17 +390,16 @@ uint8_t receive_imu_packet(void) {
 
     // Check for a null header (#2 p.5)
     if (length < IMU_HEADER_LEN) {
-        print("Error: length too short\n");
         end_imu_spi();
+        print("Error: null header\n");
         return 0;
     }
     
     // According to the reference library, we don't increment our sequence number when receiving packets
 
-    // Subtract 4 bytes get length of data (without header)
+    // Subtract 4 bytes to get length of data (without header)
     uint16_t data_len = length - IMU_HEADER_LEN;
-    print("data_len = %u\n", data_len);
-
+    
     // Read and store data
     imu_data_len = 0;
     for (uint16_t i = 0; i < data_len; i++) {
@@ -414,6 +414,7 @@ uint8_t receive_imu_packet(void) {
 
     end_imu_spi();
 
+    print("data_len = %u\n", data_len);
     print("Header: ");
     print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
@@ -616,16 +617,7 @@ void end_imu_spi(void) {
     // reset_spi_cpol_cpha();
 }
 
-uint8_t receive_and_discard_imu_packet(void) {
-    PRINT_FUNC
-    if (!receive_imu_packet()) {
-        print("Receive packet: FAIL\n");
-        return 0;
-    }
 
-    print("Receive packet: SUCCESS\n");
-    return 1;
-}
 
 uint8_t get_imu_int(void) {
     return (PINB & _BV(5)) ? 1 : 0;
