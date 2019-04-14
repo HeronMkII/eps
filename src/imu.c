@@ -248,13 +248,6 @@ void init_imu_pins(void) {
     sei();
 }
 
-void wake_imu(void) {
-    // Set wake low then high (#0 p.19)
-    set_pin_low(imu_ps0_wake.pin, imu_ps0_wake.port);
-    wait_for_imu_int();
-    set_pin_high(imu_ps0_wake.pin, imu_ps0_wake.port);
-}
-
 void reset_imu(void) {
     PRINT_FUNC
     // Assert then deassert active low reset
@@ -264,41 +257,53 @@ void reset_imu(void) {
     set_pin_high(imu_rst.pin, imu_rst.port);
 }
 
-
-
-/*
-It seems that after sending the request, first we receive a 16-byte packet (assumed as the overall system ID), followed by a separate (but not continued) 48-byte packet (assumed as the subsystem IDs).
-*/
-uint8_t get_imu_prod_id(void) {
-    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
-        // Request product ID (#0 p.23)
-        imu_data[0] = IMU_PRODUCT_ID_REQ;
-        imu_data[1] = 0x00; // reserved
-        imu_data_len = 2;
-        send_imu_packet(IMU_CONTROL);
-
-        // Get response
-        if (!receive_imu_packet()) {
-            continue;
-        }
-        if (imu_data_len >= 16 && imu_data[0] == IMU_PRODUCT_ID_RESP) {
-            // Receive 48-byte packet for subsystems (don't care about contents)
-            receive_imu_packet();
-            return 1;
-        }
-    }
-
-    return 0;
+void wake_imu(void) {
+    // Set wake low then high (#0 p.19)
+    set_pin_low(imu_ps0_wake.pin, imu_ps0_wake.port);
+    wait_for_imu_int();
+    set_pin_high(imu_ps0_wake.pin, imu_ps0_wake.port);
 }
 
+uint8_t get_imu_int(void) {
+    return (PINB & _BV(5)) ? 1 : 0;
+}
 
-
-void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
+/*
+Waits until the interrupt pin goes low.
+TODO - return timeout and success value
+TODO - how long does this take?
+Returns - 1 for success (got INT), 0 for failure (no INT)
+*/
+uint8_t wait_for_imu_int(void) {
     PRINT_FUNC
-    imu_header[0] = length & 0xFF;
-    imu_header[1] = (length >> 8) & 0xFF;
-    imu_header[2] = channel;
-    imu_header[3] = seq_num;
+    // while (get_imu_int() == 0) {}
+    // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
+    // TODO - fix get_pin_val() in lib-common
+    uint8_t timeout = UINT8_MAX;
+    while (get_imu_int() != 0 && timeout > 0) {
+        _delay_ms(1);
+        timeout--;
+    }
+
+    if (timeout == 0) {
+        print("Failed INT\n");
+        return 0;
+    }
+
+    print("Successful INT: timeout = %u\n", timeout);
+    return 1;
+}
+
+void start_imu_spi(void) {
+    // PRINT_FUNC
+    // set_spi_cpol_cpha(1, 1);
+    set_cs_low(imu_cs.pin, imu_cs.port);
+}
+
+void end_imu_spi(void) {
+    // PRINT_FUNC
+    set_cs_high(imu_cs.pin, imu_cs.port);
+    // reset_spi_cpol_cpha();
 }
 
 void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length) {
@@ -308,47 +313,6 @@ void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length) {
     *channel = imu_header[2];
     *seq_num = imu_header[3];
     print("length = %u, channel = %u, seq_num = %u\n", *length, *channel, *seq_num);
-}
-
-/*
-Populate `imu_data` before calling this; this function will take care of populating and sending the header.
-channel - 0 to 5
-Returns - 1 for success, 0 for failure
-*/
-uint8_t send_imu_packet(uint8_t channel) {
-    PRINT_FUNC
-    if (channel >= IMU_CHANNEL_COUNT) {
-        return 0;
-    }
-    
-    // Need to assert the wake signal first or else we never receive the interrupt
-    wake_imu();
-    if (!wait_for_imu_int()) {
-        return 0;
-    }
-
-    populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
-
-    print("Sending IMU SPI:\n");
-    print("Header: ");
-    print_hex(imu_header, IMU_HEADER_LEN);
-    print("Data: ");
-    print_hex(imu_data, imu_data_len);
-
-    // Set feature command (#1 p.55-56)
-    start_imu_spi();
-    for (uint16_t i = 0; i < IMU_HEADER_LEN; i++) {
-        send_spi(imu_header[i]);
-    }
-    for (uint16_t i = 0; i < imu_data_len; i++) {
-        send_spi(imu_data[i]);
-    }
-    end_imu_spi();
-
-    // Increment the sequence number for that channel
-    imu_seq_nums[channel]++;
-
-    return 1;
 }
 
 /*
@@ -433,11 +397,78 @@ uint8_t receive_imu_packet(void) {
     return 1;
 }
 
+void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length) {
+    PRINT_FUNC
+    imu_header[0] = length & 0xFF;
+    imu_header[1] = (length >> 8) & 0xFF;
+    imu_header[2] = channel;
+    imu_header[3] = seq_num;
+}
+
 /*
-Uses Q point, similar to reference library qToFloat()
+Populate `imu_data` before calling this; this function will take care of populating and sending the header.
+channel - 0 to 5
+Returns - 1 for success, 0 for failure
 */
-double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
-    return ((double) raw_data) * pow(2, -q_point);
+uint8_t send_imu_packet(uint8_t channel) {
+    PRINT_FUNC
+    if (channel >= IMU_CHANNEL_COUNT) {
+        return 0;
+    }
+    
+    // Need to assert the wake signal first or else we never receive the interrupt
+    wake_imu();
+    if (!wait_for_imu_int()) {
+        return 0;
+    }
+
+    populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
+
+    print("Sending IMU SPI:\n");
+    print("Header: ");
+    print_hex(imu_header, IMU_HEADER_LEN);
+    print("Data: ");
+    print_hex(imu_data, imu_data_len);
+
+    // Set feature command (#1 p.55-56)
+    start_imu_spi();
+    for (uint16_t i = 0; i < IMU_HEADER_LEN; i++) {
+        send_spi(imu_header[i]);
+    }
+    for (uint16_t i = 0; i < imu_data_len; i++) {
+        send_spi(imu_data[i]);
+    }
+    end_imu_spi();
+
+    // Increment the sequence number for that channel
+    imu_seq_nums[channel]++;
+
+    return 1;
+}
+
+/*
+It seems that after sending the request, first we receive a 16-byte packet (assumed as the overall system ID), followed by a separate (but not continued) 48-byte packet (assumed as the subsystem IDs).
+*/
+uint8_t get_imu_prod_id(void) {
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
+        // Request product ID (#0 p.23)
+        imu_data[0] = IMU_PRODUCT_ID_REQ;
+        imu_data[1] = 0x00; // reserved
+        imu_data_len = 2;
+        send_imu_packet(IMU_CONTROL);
+
+        // Get response
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        if (imu_data_len >= 16 && imu_data[0] == IMU_PRODUCT_ID_RESP) {
+            // Receive 48-byte packet for subsystems (don't care about contents)
+            receive_imu_packet();
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 /*
@@ -496,6 +527,13 @@ uint8_t enable_imu_feat(uint8_t feat_report_id) {
 
 uint8_t disable_imu_feat(uint8_t feat_report_id) {
     return send_imu_set_feat_cmd(feat_report_id, 0);
+}
+
+/*
+Uses Q point, similar to reference library qToFloat()
+*/
+double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
+    return ((double) raw_data) * pow(2, -q_point);
 }
 
 // x, y, z are signed fixed-point
@@ -623,68 +661,19 @@ uint8_t get_imu_cal_gyro(void) {
 }
 
 
-/*
-Waits until the interrupt pin goes low.
-TODO - return timeout and success value
-TODO - how long does this take?
-Returns - 1 for success (got INT), 0 for failure (no INT)
-*/
-uint8_t wait_for_imu_int(void) {
-    PRINT_FUNC
-    // while (get_imu_int() == 0) {}
-    // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
-    // TODO - fix get_pin_val() in lib-common
-    uint8_t timeout = UINT8_MAX;
-    while (get_imu_int() != 0 && timeout > 0) {
-        _delay_ms(1);
-        timeout--;
-    }
-
-    if (timeout == 0) {
-        print("Failed INT\n");
-        return 0;
-    }
-
-    print("Successful INT: timeout = %u\n", timeout);
-    return 1;
-}
-
-void start_imu_spi(void) {
-    // PRINT_FUNC
-    // set_spi_cpol_cpha(1, 1);
-    set_cs_low(imu_cs.pin, imu_cs.port);
-}
-
-void end_imu_spi(void) {
-    // PRINT_FUNC
-    set_cs_high(imu_cs.pin, imu_cs.port);
-    // reset_spi_cpol_cpha();
-}
-
-
-
-uint8_t get_imu_int(void) {
-    return (PINB & _BV(5)) ? 1 : 0;
-}
-
 // INT2 interrupt from INTn pin
 ISR(INT2_vect) {
     // print("\nINT2: pin = %u (%.2x)\n", get_imu_int(), PINB);
 }
 
-// Get feature request
-void get_feat_req(void) {
-    PRINT_FUNC
-    // Looking for "input report" for actual read sensor data
-    // "Get feature response" just tells the configuration of the sensor, not the actual read data
-    // "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
-    // Input reports, output reports, feature reports (#1 p.32-33)
-    // "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
-    // "Input reports may also be requested by the host at any time." (#1 p.32-33)
-    // Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
-    // Set feature command -> get feature response (should be R instead of W)
-
-}
+// Looking for "input report" for actual read sensor data
+// "Get feature response" just tells the configuration of the sensor, not the actual read data
+// "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
+// Input reports, output reports, feature reports (#1 p.32-33)
+// "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
+// "Input reports may also be requested by the host at any time." (#1 p.32-33)
+// Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
+// Set feature command -> get feature response (should be R instead of W)
 
 // TODO
 // "Note that the BNO080 also provides a timebase reference report with sensor reports:" (#0 p.28)

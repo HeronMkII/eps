@@ -9,7 +9,7 @@
 
 // 4 bytes in all headers
 #define IMU_HEADER_LEN 4
-// Max number of bytes to support in data (not including header)
+// Max number of bytes to save in data buffer (not including header)
 #define IMU_DATA_MAX_LEN 20
 
 // Channels (#0 p.22)
@@ -52,25 +52,21 @@ extern uint8_t imu_seq_nums[];
 
 void init_imu(void);
 void init_imu_pins(void);
-void wake_imu(void);
 void reset_imu(void);
-void inf_loop_imu_receive(void);
-uint8_t get_imu_prod_id(void);
-void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length);
-void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length);
-uint8_t send_imu_packet(uint8_t channel);
-uint8_t receive_imu_packet(void);
-double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point);
-uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval);
-uint8_t enable_imu_feat(uint8_t feat_report_id);
-uint8_t disable_imu_feat(uint8_t feat_report_id);
-uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z);
+void wake_imu(void);
+uint8_t get_imu_int(void);
 uint8_t wait_for_imu_int(void);
 void start_imu_spi(void);
 void end_imu_spi(void);
-void send_imu_header(uint16_t length, uint8_t channel);
-void receive_imu_header(uint16_t* length, uint8_t* channel, uint8_t* seq_num);
-uint8_t receive_and_discard_imu_packet(void);
-uint8_t get_imu_int(void);
+void process_imu_header(uint8_t* channel, uint8_t* seq_num, uint16_t* length);
+uint8_t receive_imu_packet(void);
+void populate_imu_header(uint8_t channel, uint8_t seq_num, uint16_t length);
+uint8_t send_imu_packet(uint8_t channel);
+uint8_t get_imu_prod_id(void);
+uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval);
+uint8_t enable_imu_feat(uint8_t feat_report_id);
+uint8_t disable_imu_feat(uint8_t feat_report_id);
+double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point);
+uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z);
 
 #endif
