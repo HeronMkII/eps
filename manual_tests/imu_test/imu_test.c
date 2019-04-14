@@ -45,14 +45,20 @@ void test_prod_id(void) {
 void test_accel(void) {
     print("\nGetting acceleration...\n\n");
 
-    uint16_t x = 0, y = 0, z = 0;
+    int16_t x = 0, y = 0, z = 0;
     if (!get_imu_accel(&x, &y, &z)) {
         print("\nGet acceleration: FAIL\n\n");
         return;
     }
 
-    print("\nGet acceleration: SUCCESS\n\n");
-    print("x = %u, y = %u, z = %u\n", x, y, z);
+    print("\n");
+    print("Get acceleration: SUCCESS\n");
+    print("Raw: x = %d, y = %d, z = %d\n", x, y, z);
+    print("Converted: x = %.6f, y = %.6f, z = %.6f\n",
+        imu_raw_data_to_double(x, IMU_ACCEL_Q),
+        imu_raw_data_to_double(y, IMU_ACCEL_Q),
+        imu_raw_data_to_double(z, IMU_ACCEL_Q));
+    print("\n");
 }
 
 int main(void) {
@@ -71,7 +77,11 @@ int main(void) {
 
     test_seq_nums();
     test_prod_id();
-    // test_accel();
+    receive_and_print_packets(5);
+    while (1) {
+        test_accel();
+        receive_and_print_packets(5);
+    }
 
     inf_loop_receive_and_print_packets();
     print("Done, looping...\n");

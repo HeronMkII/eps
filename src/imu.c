@@ -434,10 +434,18 @@ uint8_t receive_imu_packet(void) {
 }
 
 /*
+Uses Q point, similar to reference library qToFloat()
+*/
+double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
+    return ((double) raw_data) * pow(2, -q_point);
+}
+
+/*
 Set feature command (#1 p.55-56)
 */
 uint8_t set_imu_feature(uint8_t feat_report_id) {
     PRINT_FUNC
+
     imu_data[0] = IMU_SET_FEAT_CMD;
     imu_data[1] = feat_report_id;
     imu_data[2] = 0x00;
@@ -457,50 +465,70 @@ uint8_t set_imu_feature(uint8_t feat_report_id) {
     imu_data[15] = 0x00;
     imu_data[16] = 0x00;
     imu_data_len = 17;
+
+    // Send set feature command
     if (!send_imu_packet(IMU_CONTROL)) {
         return 0;
     }
 
-    // TODO - get feature response?
-    // receive_and_discard_imu_packet();
+    // Wait for get feature response
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        if (imu_data_len < 17) {
+            continue;
+        }
+        if (imu_data[0] != IMU_GET_FEAT_RESP) {
+            continue;
+        }
 
-    return 1;
+        return 1;
+    }
+
+    return 0;
 }
 
-uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
+// x, y, z are signed fixed-point
+// "The units are m/s^2. The Q point is 8." (#1 p.58)
+uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
     PRINT_FUNC
     // TODO - Q point?
     // Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
     // https://en.wikipedia.org/wiki/Q_(number_format)
     // TODO - m/s^2? change precision?
 
+    // Send set feature command, receive get feature response
     if (!set_imu_feature(IMU_ACCEL)) {
         return 0;
     }
 
-    // Try multiple packets
+    // Get input report packet
+    // The received packet begins with the timebase reference (0xFB) (#0 p.44, #1 p.79)
+    // Ignore base delta, sequence number, delay, etc.
     for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
         if (!receive_imu_packet()) {
             continue;
         }
-        // TODO - does this contain the timebase reference? does that only apply to batching? are we using batching? (#0 p.44, #1 p.79)
-        if (imu_data_len < 10) {
+        if (imu_data_len < 15) {
             continue;
         }
-        if (imu_data[0] != IMU_ACCEL) {
+        if (imu_data[0] != IMU_BASE_TIMESTAMP_REF) {
+            continue;
+        }
+        if (imu_data[5] != IMU_ACCEL) {
             continue;
         }
 
         if (x != NULL) {
-            *x = (((uint16_t) imu_data[5]) << 8) | ((uint16_t) imu_data[4]);
+            *x = (((uint16_t) imu_data[10]) << 8) | ((uint16_t) imu_data[9]);
         }
         if (y != NULL) {
-            *y = (((uint16_t) imu_data[7]) << 8) | ((uint16_t) imu_data[6]);
+            *y = (((uint16_t) imu_data[12]) << 8) | ((uint16_t) imu_data[11]);
         }
         if (z != NULL) {
-            *z = (((uint16_t) imu_data[9]) << 8) | ((uint16_t) imu_data[8]);
+            *z = (((uint16_t) imu_data[14]) << 8) | ((uint16_t) imu_data[13]);
         }
-
         return 1;
     }
 
