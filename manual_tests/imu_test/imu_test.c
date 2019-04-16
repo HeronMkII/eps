@@ -68,6 +68,79 @@ void test_accel_inf(void) {
     }
 }
 
+void test_uncal_gyro_once(void) {
+    print("\nGetting uncalibrated gyroscope...\n\n");
+
+    int16_t x = 0, y = 0, z = 0;
+    int16_t bias_x = 0, bias_y = 0, bias_z = 0;
+    if (!get_imu_uncal_gyro(&x, &y, &z, &bias_x, &bias_y, &bias_z)) {
+        print("\nGet uncalibrated gyroscope: FAIL\n\n");
+        return;
+    }
+
+    print("\n");
+    print("Get uncalibrated gyroscope: SUCCESS\n");
+    print("Raw: x = %d, y = %d, z = %d\n", x, y, z);
+    print("Converted: x = %.6f, y = %.6f, z = %.6f\n",
+        imu_raw_data_to_double(x, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(y, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(z, IMU_UNCAL_GYRO_Q));
+    print("Raw: bias_x = %d, bias_y = %d, bias_z = %d\n", bias_x, bias_y, bias_z);
+    print("Converted: bias_x = %.6f, bias_y = %.6f, bias_z = %.6f\n",
+        imu_raw_data_to_double(bias_x, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(bias_y, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(bias_z, IMU_UNCAL_GYRO_Q));
+    print("\n");
+}
+
+void test_uncal_gyro_inf(void) {
+    while (1) {
+        test_uncal_gyro_once();
+        _delay_ms(500);
+    }
+}
+
+void test_cal_gyro_once(void) {
+    print("\nGetting calibrated gyroscope...\n\n");
+
+    int16_t x = 0, y = 0, z = 0;
+    if (!get_imu_cal_gyro(&x, &y, &z)) {
+        print("\nGet calibrated gyroscope.: FAIL\n\n");
+        return;
+    }
+
+    print("\n");
+    print("Get calibrated gyroscope.: SUCCESS\n");
+    print("Raw: x = %d, y = %d, z = %d\n", x, y, z);
+    print("Converted: x = %.6f, y = %.6f, z = %.6f\n",
+        imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
+        imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
+        imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+    print("\n");
+}
+
+void test_cal_gyro_inf(void) {
+    while (1) {
+        test_cal_gyro_once();
+        _delay_ms(500);
+    }
+}
+
+// Without success/fail print statements
+void test_cal_gyro_fast(void) {
+    print("\nGetting calibrated gyroscope...\n\n");
+
+    while (1) {
+        int16_t x = 0, y = 0, z = 0;
+        get_imu_cal_gyro(&x, &y, &z);
+
+        print("x = %.6f, y = %.6f, z = %.6f\n",
+            imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
+            imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
+            imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+    }
+}
+
 int main(void) {
     init_uart();
     init_spi();
@@ -82,10 +155,23 @@ int main(void) {
     // This should initialize interrupts and receive the SHTP advertisement
     init_imu();
 
-    test_seq_nums();
-    test_prod_id();
-    receive_and_print_packets(5);
-    test_accel_inf();
+    // test_seq_nums();
+
+    // test_prod_id();
+
+    // test_accel_once();
+    // receive_and_print_packets(5);
+    // test_accel_inf();
+
+    // test_uncal_gyro_once();
+    // receive_and_print_packets(5);
+    // test_uncal_gyro_inf();
+
+    // test_cal_gyro_once();
+    // receive_and_print_packets(5);
+    // test_cal_gyro_inf();
+
+    test_cal_gyro_fast();
 
     inf_loop_receive_and_print_packets();
     print("Done, looping...\n");

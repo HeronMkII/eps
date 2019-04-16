@@ -79,6 +79,8 @@ The PS1 port is permanently tied to VCC (1). The PS0/WAKE port is tied to a GPIO
 
 NOTE: Protocol sends LSB first, MSB after
 
+For input report packets, the received packet begins with the 5-byte timebase reference section (0xFB) (#0 p.44, #1 p.79)
+
 TODO - sensor calibration
 TODO - sensor metadata - FRS read operation (#1 p. 29)
 */
@@ -296,7 +298,7 @@ uint8_t receive_imu_packet(void) {
     process_imu_header(&channel, &seq_num, &length);
 
 #ifdef IMU_DEBUG
-    print("Received IMU SPI:\n");
+    print("\nReceived IMU SPI:\n");
     print("length = %u, channel = %u, seq_num = %u\n", length, channel, seq_num);
 #endif
 
@@ -388,7 +390,7 @@ uint8_t send_imu_packet(uint8_t channel) {
     populate_imu_header(channel, imu_seq_nums[channel], IMU_HEADER_LEN + imu_data_len);
 
 #ifdef IMU_DEBUG
-    print("Sending IMU SPI:\n");
+    print("\nSending IMU SPI:\n");
     print("Header: ");
     print_hex(imu_header, IMU_HEADER_LEN);
     print("Data: ");
@@ -564,20 +566,118 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
 // https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
 
 /*
-Uncalibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
-Non-drift-compensated rotational velocity
-"rotational velocity without drift compensation. An estimate of drift is also reported."
+Uncalibrated gyroscope - non-drift-compensated rotational velocity
+
+"The gyroscope uncalibrated sensor reports rotational velocity without drift compensation. An estimate of drift is also reported. The units for both values are rad/s. The Q point for both values is 9. The report ID is 0x07." (#1 p.60)
+
+x, y, z are signed fixed-point
 */
-uint8_t get_imu_uncal_gyro(void) {
-    return 1;
+uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x, 
+    int16_t* bias_y, int16_t* bias_z) {
+    
+    // Send set feature command, receive get feature response
+    if (!enable_imu_feat(IMU_UNCAL_GYRO)) {
+        return 0;
+    }
+
+    // Get input report packet
+    // The received packet begins with the timebase reference (0xFB) (#0 p.44, #1 p.79)
+    // Ignore base delta, sequence number, delay, etc.
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        if (imu_data_len < 21) {
+            continue;
+        }
+        if (imu_data[0] != IMU_BASE_TIMESTAMP_REF) {
+            continue;
+        }
+        if (imu_data[5] != IMU_UNCAL_GYRO) {
+            continue;
+        }
+
+        if (x != NULL) {
+            *x = (((uint16_t) imu_data[10]) << 8) | ((uint16_t) imu_data[9]);
+        }
+        if (y != NULL) {
+            *y = (((uint16_t) imu_data[12]) << 8) | ((uint16_t) imu_data[11]);
+        }
+        if (z != NULL) {
+            *z = (((uint16_t) imu_data[14]) << 8) | ((uint16_t) imu_data[13]);
+        }
+        if (bias_x != NULL) {
+            *bias_x = (((uint16_t) imu_data[16]) << 8) | ((uint16_t) imu_data[15]);
+        }
+        if (bias_y != NULL) {
+            *bias_y = (((uint16_t) imu_data[18]) << 8) | ((uint16_t) imu_data[17]);
+        }
+        if (bias_z != NULL) {
+            *bias_z = (((uint16_t) imu_data[20]) << 8) | ((uint16_t) imu_data[19]);
+        }
+
+        // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
+        // Send set feature command, receive get feature response
+        if (!disable_imu_feat(IMU_UNCAL_GYRO)) {
+            return 0;
+        }
+
+        return 1;
+    }
+
+    return 0;
 }
 
 /*
-Calibrated gyroscope (rad/s, Q point = 9) (#1 p.60)
-Drift-compensated rotational velocity
+Calibrated gyroscope - drift-compensated rotational velocity
+
+"The gyroscope calibrated sensor reports drift-compensated rotational velocity. The units are rad/s. The Q point is 9. The report ID is 0x02." (#1 p.60)
+
+x, y, z are signed fixed-point
 */
-uint8_t get_imu_cal_gyro(void) {
-    return 1;
+uint8_t get_imu_cal_gyro(int16_t* x, int16_t* y, int16_t* z) {
+    // Send set feature command, receive get feature response
+    if (!enable_imu_feat(IMU_CAL_GYRO)) {
+        return 0;
+    }
+
+    // Get input report packet
+    // The received packet begins with the timebase reference (0xFB) (#0 p.44, #1 p.79)
+    // Ignore base delta, sequence number, delay, etc.
+    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
+        if (!receive_imu_packet()) {
+            continue;
+        }
+        if (imu_data_len < 15) {
+            continue;
+        }
+        if (imu_data[0] != IMU_BASE_TIMESTAMP_REF) {
+            continue;
+        }
+        if (imu_data[5] != IMU_CAL_GYRO) {
+            continue;
+        }
+
+        if (x != NULL) {
+            *x = (((uint16_t) imu_data[10]) << 8) | ((uint16_t) imu_data[9]);
+        }
+        if (y != NULL) {
+            *y = (((uint16_t) imu_data[12]) << 8) | ((uint16_t) imu_data[11]);
+        }
+        if (z != NULL) {
+            *z = (((uint16_t) imu_data[14]) << 8) | ((uint16_t) imu_data[13]);
+        }
+
+        // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
+        // Send set feature command, receive get feature response
+        if (!disable_imu_feat(IMU_CAL_GYRO)) {
+            return 0;
+        }
+
+        return 1;
+    }
+
+    return 0;
 }
 
 
