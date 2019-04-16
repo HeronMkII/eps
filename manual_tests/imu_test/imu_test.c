@@ -68,6 +68,15 @@ void test_accel_inf(void) {
     }
 }
 
+void test_accel_fast_once(void) {
+    int16_t x = 0, y = 0, z = 0;
+    get_imu_accel(&x, &y, &z);
+    print("Acceleration: x = %+.6f, y = %+.6f, z = %+.6f\n",
+        imu_raw_data_to_double(x, IMU_ACCEL_Q),
+        imu_raw_data_to_double(y, IMU_ACCEL_Q),
+        imu_raw_data_to_double(z, IMU_ACCEL_Q));
+}
+
 void test_uncal_gyro_once(void) {
     print("\nGetting uncalibrated gyroscope...\n\n");
 
@@ -100,6 +109,15 @@ void test_uncal_gyro_inf(void) {
     }
 }
 
+void test_uncal_gyro_fast_once(void) {
+    int16_t x = 0, y = 0, z = 0;
+    get_imu_uncal_gyro(&x, &y, &z, NULL, NULL, NULL);
+    print("Uncalibrated Gyroscope: x = %+.6f, y = %+.6f, z = %+.6f\n",
+        imu_raw_data_to_double(x, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(y, IMU_UNCAL_GYRO_Q),
+        imu_raw_data_to_double(z, IMU_UNCAL_GYRO_Q));
+}
+
 void test_cal_gyro_once(void) {
     print("\nGetting calibrated gyroscope...\n\n");
 
@@ -127,17 +145,53 @@ void test_cal_gyro_inf(void) {
 }
 
 // Without success/fail print statements
-void test_cal_gyro_fast(void) {
-    print("\nGetting calibrated gyroscope...\n\n");
+void test_cal_gyro_fast_once(void) {
+    int16_t x = 0, y = 0, z = 0;
+    get_imu_cal_gyro(&x, &y, &z);
+    print("Calibrated Gyroscope: x = %+.6f, y = %+.6f, z = %+.6f\n",
+        imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
+        imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
+        imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+}
+
+// Compare uncalibrated with calibrated
+void test_gyro_comp_inf(void) {
+    print("\nGetting gyroscope...\n\n");
 
     while (1) {
-        int16_t x = 0, y = 0, z = 0;
-        get_imu_cal_gyro(&x, &y, &z);
+        int16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
+        int16_t bias_x = 0, bias_y = 0, bias_z = 0;
+        get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, &bias_x, &bias_y, &bias_z);
+        int16_t cal_x = 0, cal_y = 0, cal_z = 0;
+        get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
 
-        print("x = %.6f, y = %.6f, z = %.6f\n",
-            imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
-            imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
-            imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+        print("\n");
+        print("Uncalibrated: x = %+.6f, y = %+.6f, z = %+.6f\n",
+            imu_raw_data_to_double(uncal_x, IMU_UNCAL_GYRO_Q),
+            imu_raw_data_to_double(uncal_y, IMU_UNCAL_GYRO_Q),
+            imu_raw_data_to_double(uncal_z, IMU_UNCAL_GYRO_Q));
+        print("Calibrated:   x = %+.6f, y = %+.6f, z = %+.6f\n",
+            imu_raw_data_to_double(cal_x, IMU_CAL_GYRO_Q),
+            imu_raw_data_to_double(cal_y, IMU_CAL_GYRO_Q),
+            imu_raw_data_to_double(cal_z, IMU_CAL_GYRO_Q));
+        print("Bias:         x = %+.6f, y = %+.6f, z = %+.6f\n",
+            imu_raw_data_to_double(bias_x, IMU_UNCAL_GYRO_Q),
+            imu_raw_data_to_double(bias_y, IMU_UNCAL_GYRO_Q),
+            imu_raw_data_to_double(bias_z, IMU_UNCAL_GYRO_Q));
+    }
+}
+
+
+// Preferably disable IMU_DEBUG for this one
+void test_all_fast_inf(void) {
+    test_prod_id();
+
+    while (1) {
+        print("\n");
+        test_accel_fast_once();
+        test_uncal_gyro_fast_once();
+        test_cal_gyro_fast_once();
+        _delay_ms(500);
     }
 }
 
@@ -171,7 +225,11 @@ int main(void) {
     // receive_and_print_packets(5);
     // test_cal_gyro_inf();
 
-    test_cal_gyro_fast();
+    // test_cal_gyro_fast();
+
+    // test_gyro_comp_inf();
+
+    test_all_fast_inf();
 
     inf_loop_receive_and_print_packets();
     print("Done, looping...\n");

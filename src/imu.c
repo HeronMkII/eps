@@ -2,18 +2,21 @@
 IMU (Inertial Measurement Unit) library
 BNO080
 
+The IMU contains sensors including an accelerometer, gyroscope, and magnetometer.
+We use it to collect ADCS data about the positioning and orientation of the
+satellite.
+
 Datasheets:
 #0 (BNO080 Datasheet): https://cdn.sparkfun.com/assets/1/3/4/5/9/BNO080_Datasheet_v1.3.pdf
-    This is the main datasheet for the specific part itself
+    This is the main datasheet for the BNO080 component.
 #1 (SH-2 Reference Manual): https://cdn.sparkfun.com/assets/4/d/9/3/8/SH-2-Reference-Manual-v1.2.pdf
-    This is a supplementary document for the part itself, describing all the sensors and their message/report formats
+    This is a supplementary document for the BNO080 component, describing all the
+    sensors and their message/report formats in detail.
 #2 (Sensor Hub Transport Protocol): https://cdn.sparkfun.com/assets/7/6/9/3/c/Sensor-Hub-Transport-Protocol-v1.7.pdf
-    This document described the more general SHTP protocol, not specific to this part
+    This document describes the more general SHTP protocol, not specific to the BNO080 component.
 
 Based on SparkFun BNO080 Arduino library:
 https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library
-https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.cpp
-https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/blob/master/src/SparkFun_BNO080_Arduino_Library.h
 
 Other Library/Driver Implementations:
 https://github.com/hcrest/bno080-driver
@@ -34,63 +37,74 @@ https://github.com/hcrest/bno080-nucleo-demo/issues/6
 https://www.raspberrypi.org/forums/viewtopic.php?t=196310
 https://github.com/fm4dd/pi-bno080/blob/master/issues.md
 
-
-The IMU contains sensors including an accelerometer and gyroscope. We use it to
-collect ADCS data about the positioning and orientation of the satellite.
+Most of the information is in the main datasheet, but there are supplementary
+documents with necessary informataion (indicated in the references of the main
+datasheet).
 
 The IMU is located on the EPS PCB and collected to the EPS microcontroller
 because it should be located in the centre of the satellite along the long axis,
 which is not possible on OBC.
 
-Most of the information is in the main datasheet, but there are supplementary
-documents with necessary informataion (indicated in the references of the main
-datasheet).
+SHTP Protocol:
+- One transmission to or from the IMU is referred to as a "packet", which is split
+up into the "header" and the "cargo".
+- Host (MCU) to hub (BNO080) - write
+- Hub (BNO080) to host (MCU) - read
+- SHTP header (#2 p. 4)
+- Each channel has its own sequence number (#2 p. 4)
+- NOTE: Protocol always sends LSB first, MSB last
+- "HINT may be deasserted at any time after the read begins, including after the transaction is complete." (#2 p.6)
 
-One transmission to or from the IMU is referred to as a "packet", which is split up into the "header" and the "data".
+Communication:
+- SPI Interface - CPOL = 1, CPHA = 1 (#0 p.17-19)
+- Channel usage (#2 p. 15)
+- Report IDs (#1 p. 36) - byte 0
+- Sensor triggering (#1 p. 34) - most sensors are continuous
+- Sensor reports (#1 p. 53)
+- Cannot use one-shot trigger mode reporting, only continuous (#1 p.34-35) - the sensor keeps sending data at regular intervals while enabled
+- Configure sensor to "normal" instead of "wakeup" (#1 p. 33)
+- Example of getting accelerometer data (#0 p. 43-44)
+- Specific sensor data starts on (#1 p. 57)
+- Get feature request (#1 p. 55)
+- "Get feature response" just tells the configuration of the sensor, not the actual read data
+- "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
+- "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
+- "Input reports may also be requested by the host at any time." (#1 p.32-33) -  not sure what this is supposed to mean, just ignored it
+- Set feature command -> get feature response (should be R instead of W) (#1 p.36)
+- "Note that the BNO080 also provides a timebase reference report with sensor reports:" (#0 p.28)
+- For input report packets, the received packet begins with the 5-byte timebase reference section (0xFB) (#0 p.44, #1 p.79)
 
-SPI Interface - #0 p. 17-19
-CPOL = 1, CPHA = 1 (#0 p. 19)
+Request data:
+- Send Set Feature Request
+- IMU responds with Get Feature Response
+- IMU sends Input Report after specified interval (with actual sensor data)
+- Send Set Feature Request with time interval = 0 (to disable sensor, stop receiving input reports)
+- IMU responds with Get Feature Response
 
-sensor triggering (#1 p. 34) - most sensors are continuous
-Report IDs (#1 p. 36) - byte 0
-Sensor reports (#1 p. 53)
-Get feature request (DATA!!) - (#1 p. 55)
-Request raw acceleration - send Get Feature Request, will respond in the future with a Get Feature Response
-Get Feature Reponse messages can also be triggered regularly using the period set for the sensor
-Specific sensor data starts on (#1 p. 57)
-
-SHTP header (#2 p. 4)
-Each channel has its own sequence number (#2 p. 4)
-At startup, hub sends it advertisement message? (#2 p. 5)
-
-Must delay a minimum of 100us between bytes written (#2 p. 12)
-Channel usage (#2 p. 15)
-
-Configure sensor to "normal" instead of "wakeup" (#1 p. 33)
-
-Cannot use one-shot trigger mode reporting, only continuous (#1 p.34-35)
-
-Currently used sensors (TODO):
-- accelerometer
-
-Example of getting accelerometer data (#0 p. 43-44)
-
-The PS1 port is permanently tied to VCC (1). The PS0/WAKE port is tied to a GPIO pin.
-
-NOTE: Protocol sends LSB first, MSB after
-
-For input report packets, the received packet begins with the 5-byte timebase reference section (0xFB) (#0 p.44, #1 p.79)
+Hardware Configuration:
+- The PS1 port is permanently tied to VCC (1).
+- The PS0/WAKE port is tied to a GPIO pin.
 
 TODO - sensor calibration
-TODO - sensor metadata - FRS read operation (#1 p. 29)
+
+TODO - calibrate gyroscope CAN/trans command?
+Gyro/angular velocity measurements (#0 p.31)
+Gyroscope drift:
+https://www.analog.com/en/analog-dialogue/raqs/raq-issue-139.html
+https://motsai.com/handling-gyroscopes-bias-drift/
+https://stemrobotics.cs.pdx.edu/sites/default/files/Gyro.pdf
+https://base.xsens.com/hc/en-us/articles/209611089-Understanding-Sensor-Bias-offset-
+https://stackoverflow.com/questions/14210206/gyroscope-drift-on-mobile-phones
+https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
 */
 
 #include "imu.h"
 
-#define PRINT_FUNC print("%s\n", __FUNCTION__);
+// Useful for debugging
+// #define PRINT_FUNC print("%s\n", __FUNCTION__);
 
 // Comment out this line to disable debugging print statements (sent/received packets)
-#define IMU_DEBUG
+// #define IMU_DEBUG
 
 // CLKSEL0
 pin_info_t imu_clksel0 = {
@@ -136,8 +150,6 @@ pin_info_t imu_int = {
 };
 
 
-
-
 // Count the number of messages on each SHTP channel (in SHTP header) (#2 p. 4)
 uint8_t imu_seq_nums[6] = { 0 };
 
@@ -145,6 +157,9 @@ uint8_t imu_header[IMU_HEADER_LEN] = { 0x00 };
 uint8_t imu_data[IMU_DATA_MAX_LEN] = { 0x00 };
 // Number of valid bytes in `imu_data`, NOT including the header
 uint16_t imu_data_len = 0;
+
+
+
 
 // TODO - modify lib-common print_bytes, fix uint16_t bug for len/i
 void print_hex(uint8_t* data, uint16_t len) {
@@ -173,6 +188,7 @@ void init_imu(void) {
     // packet [...] Following the SHTP advertisement packet, the individual applications built in to the BNO080 will send a packet indicating they have left the reset state" (#0 p.43)
     // "On system startup, the SHTP control application will send its
     // full advertisement response, unsolicited, to the host." (#2 p.16)
+    // At startup, hub sends it advertisement message (#2 p.5)
     receive_imu_packet();
 
     // "The executable will issue a reset message on SHTP channel 1" (#0 p.43)
@@ -576,16 +592,6 @@ uint8_t get_imu_cal_gyro(int16_t* x, int16_t* y, int16_t* z) {
     return get_imu_data(IMU_CAL_GYRO, x, y, z);
 }
 
-// TODO - calibrate gyroscope CAN/trans command?
-// Gyro/angular velocity measurements (#0 p.31)
-// Gyroscope drift:
-// https://www.analog.com/en/analog-dialogue/raqs/raq-issue-139.html
-// https://motsai.com/handling-gyroscopes-bias-drift/
-// https://stemrobotics.cs.pdx.edu/sites/default/files/Gyro.pdf
-// https://base.xsens.com/hc/en-us/articles/209611089-Understanding-Sensor-Bias-offset-
-// https://stackoverflow.com/questions/14210206/gyroscope-drift-on-mobile-phones
-// https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
-
 /*
 Uncalibrated gyroscope - non-drift-compensated rotational velocity
 
@@ -656,20 +662,3 @@ uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x,
 ISR(INT2_vect) {
     // print("\nINT2: pin = %u (%.2x)\n", get_imu_int(), PINB);
 }
-
-// Looking for "input report" for actual read sensor data
-// "Get feature response" just tells the configuration of the sensor, not the actual read data
-// "Sensor feature reports are used to control and configure sensors, and to retrieve sensor configuration. Sensor input reports are used to send sensor data to the host." (#1 p.53)
-// Input reports, output reports, feature reports (#1 p.32-33)
-// "Sensor operating rate is controlled through the report interval field. When set to zero the sensor is off. When set to a non-zero value the sensor generates reports at that interval or more frequently." (#1 p.33)
-// "Input reports may also be requested by the host at any time." (#1 p.32-33)
-// Didn't find any information about how to request an input report at any time - probably just need to do set feature request with a continuously repeating interval, wait for a single input report, then set feature request again with a period of 0 to disable the sensor
-// Set feature command -> get feature response (should be R instead of W)
-
-// TODO
-// "Note that the BNO080 also provides a timebase reference report with sensor reports:" (#0 p.28)
-
-// "HINT may be deasserted at any time after the read begins, including after the transaction is complete." (#2 p.6)
-// e.g. wait_for_imu_int_low() and wait_for_imu_int_high(), or wait_for_imu_int(0/1)
-// e.g. do transaction, wait for INT high
-// e.g. before read, wait for INT high then low
