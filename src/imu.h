@@ -69,6 +69,7 @@ uint8_t send_imu_set_feat_cmd(uint8_t feat_report_id, uint32_t report_interval);
 uint8_t enable_imu_feat(uint8_t feat_report_id);
 uint8_t disable_imu_feat(uint8_t feat_report_id);
 double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point);
+uint8_t get_imu_data(uint8_t feat_report_id, int16_t* x, int16_t* y, int16_t* z);
 uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z);
 uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x, 
     int16_t* bias_y, int16_t* bias_z);

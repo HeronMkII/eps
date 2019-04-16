@@ -508,11 +508,13 @@ double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
     return ((double) raw_data) / ((double) (1 << q_point));
 }
 
-// x, y, z are signed fixed-point
-// "The units are m/s^2. The Q point is 8." (#1 p.58)
-uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
+/*
+Enables a feature, gets one input report, and disables the feature.
+This only works for features that provide an input report of 5 bytes (timebase reference) + 10 bytes (sensor data, last 6 bytes are x/y/z)
+*/
+uint8_t get_imu_data(uint8_t feat_report_id, int16_t* x, int16_t* y, int16_t* z) {
     // Send set feature command, receive get feature response
-    if (!enable_imu_feat(IMU_ACCEL)) {
+    if (!enable_imu_feat(feat_report_id)) {
         return 0;
     }
 
@@ -529,7 +531,7 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
         if (imu_data[0] != IMU_BASE_TIMESTAMP_REF) {
             continue;
         }
-        if (imu_data[5] != IMU_ACCEL) {
+        if (imu_data[5] != feat_report_id) {
             continue;
         }
 
@@ -545,7 +547,7 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
 
         // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
         // Send set feature command, receive get feature response
-        if (!disable_imu_feat(IMU_ACCEL)) {
+        if (!disable_imu_feat(feat_report_id)) {
             return 0;
         }
 
@@ -553,6 +555,25 @@ uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
     }
 
     return 0;
+}
+
+/*
+x, y, z are signed fixed-point
+"The units are m/s^2. The Q point is 8." (#1 p.58)
+*/
+uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
+    return get_imu_data(IMU_ACCEL, x, y, z);
+}
+
+/*
+Calibrated gyroscope - drift-compensated rotational velocity
+
+"The gyroscope calibrated sensor reports drift-compensated rotational velocity. The units are rad/s. The Q point is 9. The report ID is 0x02." (#1 p.60)
+
+x, y, z are signed fixed-point
+*/
+uint8_t get_imu_cal_gyro(int16_t* x, int16_t* y, int16_t* z) {
+    return get_imu_data(IMU_CAL_GYRO, x, y, z);
 }
 
 // TODO - calibrate gyroscope CAN/trans command?
@@ -571,6 +592,8 @@ Uncalibrated gyroscope - non-drift-compensated rotational velocity
 "The gyroscope uncalibrated sensor reports rotational velocity without drift compensation. An estimate of drift is also reported. The units for both values are rad/s. The Q point for both values is 9. The report ID is 0x07." (#1 p.60)
 
 x, y, z are signed fixed-point
+
+This does not use `get_imu_data()` because its input report format is different.
 */
 uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x, 
     int16_t* bias_y, int16_t* bias_z) {
@@ -619,58 +642,6 @@ uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x,
         // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
         // Send set feature command, receive get feature response
         if (!disable_imu_feat(IMU_UNCAL_GYRO)) {
-            return 0;
-        }
-
-        return 1;
-    }
-
-    return 0;
-}
-
-/*
-Calibrated gyroscope - drift-compensated rotational velocity
-
-"The gyroscope calibrated sensor reports drift-compensated rotational velocity. The units are rad/s. The Q point is 9. The report ID is 0x02." (#1 p.60)
-
-x, y, z are signed fixed-point
-*/
-uint8_t get_imu_cal_gyro(int16_t* x, int16_t* y, int16_t* z) {
-    // Send set feature command, receive get feature response
-    if (!enable_imu_feat(IMU_CAL_GYRO)) {
-        return 0;
-    }
-
-    // Get input report packet
-    // The received packet begins with the timebase reference (0xFB) (#0 p.44, #1 p.79)
-    // Ignore base delta, sequence number, delay, etc.
-    for (uint8_t i = 0; i < IMU_PACKET_CHECK_COUNT; i++) {
-        if (!receive_imu_packet()) {
-            continue;
-        }
-        if (imu_data_len < 15) {
-            continue;
-        }
-        if (imu_data[0] != IMU_BASE_TIMESTAMP_REF) {
-            continue;
-        }
-        if (imu_data[5] != IMU_CAL_GYRO) {
-            continue;
-        }
-
-        if (x != NULL) {
-            *x = (((uint16_t) imu_data[10]) << 8) | ((uint16_t) imu_data[9]);
-        }
-        if (y != NULL) {
-            *y = (((uint16_t) imu_data[12]) << 8) | ((uint16_t) imu_data[11]);
-        }
-        if (z != NULL) {
-            *z = (((uint16_t) imu_data[14]) << 8) | ((uint16_t) imu_data[13]);
-        }
-
-        // After getting data from the input report, disable the sensor so we don't keep receiving input report packets every 60ms
-        // Send set feature command, receive get feature response
-        if (!disable_imu_feat(IMU_CAL_GYRO)) {
             return 0;
         }
 
