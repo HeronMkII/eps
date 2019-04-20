@@ -214,7 +214,7 @@ void init_imu_pins(void) {
     // Interrupt input
     init_input_pin(imu_int.pin, imu_int.ddr);
     // configure input pullup resistor (14.2.1, p.95)
-    PORTB |= _BV(5);
+    set_pin_pullup(imu_int.pin, imu_int.port, 1);
     // RSTn = 1 (#0 p.10)
     init_output_pin(imu_rst.pin, imu_rst.ddr, 1);
     
@@ -244,7 +244,7 @@ void wake_imu(void) {
 }
 
 uint8_t get_imu_int(void) {
-    return (PINB & _BV(5)) ? 1 : 0;
+    return get_pin_val(imu_int.pin, imu_int.port);
 }
 
 /*
@@ -253,7 +253,6 @@ Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
     // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
-    // TODO - fix get_pin_val() in lib-common
     uint8_t timeout = UINT8_MAX;
     while (get_imu_int() != 0 && timeout > 0) {
         _delay_ms(1);
