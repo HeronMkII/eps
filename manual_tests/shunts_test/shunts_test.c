@@ -3,10 +3,14 @@
 
 #include "../../src/shunts.h"
 
+bool automatic = false;
+
 void print_cmds(void) {
     print("1. Turn shunts on (battery charging off)\n");
     print("2. Turn shunts off (battery charging on)\n");
-    print("3. Run shunt control algorithm\n");
+    print("3. Run shunt control algorithm once\n");
+    print("4. Enable automatic shunt control algorithm\n");
+    print("5. Disable automatic shunt control algorithm\n");
 }
 
 uint8_t uart_cb(const uint8_t* data, uint8_t len) {
@@ -34,11 +38,20 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
                 print("Shunts changed\n");
             }
             break;
+        case '4':
+            automatic = true;
+            print("Enabled automatic\n");
+            break;
+        case '5':
+            automatic = false;
+            print("Disabled automatic\n");
+            break;
         default:
             break;
     }
 
     print("are_shunts_on = %u\n", are_shunts_on);
+    print("automatic = %u\n", automatic);
 
     return 1;
 }
@@ -78,6 +91,21 @@ int main(void) {
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             print("Battery Voltage: %.6f V\n", batt_voltage);
         }
+
+        if (automatic) {
+            // Run the shunt algorithm and check if the state changed
+            bool are_shunts_on_saved = are_shunts_on;
+            control_shunts();
+            if (are_shunts_on != are_shunts_on_saved) {
+                print("Shunts changed\n");
+                if (are_shunts_on) {
+                    print("Shunts ON (charging OFF)\n");
+                } else {
+                    print("Shunts OFF (charging ON)\n");
+                }
+            }
+        }
+
         _delay_ms(1000);
     }
 }
