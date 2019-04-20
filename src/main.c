@@ -11,6 +11,8 @@ int main(void) {
     while (1) {
         // Reset watchdog timer
         WDT_ENABLE_SYS_RESET(WDTO_8S);
+        // Shunt control algorithm
+        control_shunts();
         // Send a TX CAN message
         send_next_tx_msg();
         // Process an RX CAN message

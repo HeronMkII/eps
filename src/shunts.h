@@ -19,12 +19,12 @@
 #define SHUNTS_POS_Y 2   // +Y face
 #define SHUNTS_NEG_Y 3   // -Y face
 
-// If the battery output voltage goes above this threshold,
+// If the battery output voltage goes above this threshold (in V),
 // the shunts should be turned on (battery charging off)
-#define SHUNTS_ON_THRESHOLD 4.0
-// If the battery output voltage goes below this threshold,
+#define SHUNTS_ON_THRESHOLD 4.19
+// If the battery output voltage goes below this threshold (in V),
 // the shunts should be turned off (battery charging on)
-#define SHUNTS_OFF_THRESHOLD 3.8
+#define SHUNTS_OFF_THRESHOLD 4.15
 
 extern bool are_shunts_on;
 
