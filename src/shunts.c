@@ -53,11 +53,10 @@ void control_shunts(void) {
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double batt_voltage = adc_raw_data_to_eps_vol(raw_data);
 
-    // TODO - figure out thresholds
     // Decide whether to switch the shunts on, off, or stay the same
-    if (!are_shunts_on && batt_voltage > SHUNTS_ON_THRESHOLD) {
+    if ((!are_shunts_on) && (batt_voltage > SHUNTS_ON_THRESHOLD)) {
         turn_shunts_on();
-    } else if (are_shunts_on && batt_voltage < SHUNTS_OFF_THRESHOLD) {
+    } else if (are_shunts_on && (batt_voltage < SHUNTS_OFF_THRESHOLD)) {
         turn_shunts_off();
     }
 }

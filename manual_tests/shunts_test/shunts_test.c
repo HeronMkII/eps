@@ -6,10 +6,12 @@
 void print_cmds(void) {
     print("1. Turn shunts on (battery charging off)\n");
     print("2. Turn shunts off (battery charging on)\n");
-    print("3. Control shunts (based on threshold)\n");
+    print("3. Run shunt control algorithm\n");
 }
 
 uint8_t uart_cb(const uint8_t* data, uint8_t len) {
+    bool are_shunts_on_saved;
+
     switch (data[0]) {
         case 'h':
             print_cmds();
@@ -23,8 +25,14 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
             print("Turned shunts off\n");
             break;
         case '3':
+            are_shunts_on_saved = are_shunts_on;
             control_shunts();
-            print("Controlled shunts\n");
+            print("Ran shunt control algorithm\n");
+            if (are_shunts_on == are_shunts_on_saved) {
+                print("Shunts stayed the same\n");
+            } else {
+                print("Shunts changed\n");
+            }
             break;
         default:
             break;

@@ -372,6 +372,19 @@ int main(void) {
     while(1) {
         WDT_ENABLE_SYS_RESET(WDTO_8S);
 
+        // Run the shunt algorithm and check if the state changed
+        bool are_shunts_on_saved = are_shunts_on;
+        control_shunts();
+        if (are_shunts_on != are_shunts_on_saved) {
+            print("Shunts changed\n");
+            if (are_shunts_on) {
+                print("Shunts ON (charging OFF)\n");
+            } else {
+                print("Shunts OFF (charging ON)\n");
+            }
+        }
+
+        // CAN TX
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             print_next_tx_msg();
             if (sim_obc) {
@@ -381,6 +394,7 @@ int main(void) {
             }
         }
 
+        // CAN RX
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             print_next_rx_msg();
             process_next_rx_msg();
