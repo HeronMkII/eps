@@ -1,6 +1,12 @@
 /*
 Controls the shunts (MOSFET transistors) that control the connection between the
 solar panels and batteries.
+
+TODO - account for weird voltage spikes in +PACK (battery voltage), don't want
+       to keep switching the shunts because of single-measurement voltage spikes
+    - e.g. measure voltage, delay 1/10 of period (of repeating voltage
+      fluctuations), measure voltage, delay 1/10 of period, measure voltage,
+      average voltages, use that to determine whether to switch the shunts
 */
 
 #include "shunts.h"
