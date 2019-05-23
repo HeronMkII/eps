@@ -2,6 +2,8 @@
 NOTE: SET COOLTERM BAUD RATE TO 115,200
 */
 
+#include <conversions/conversions.h>
+
 #include "../../src/imu.h"
 
 void receive_and_print_packets(uint16_t count) {
@@ -45,7 +47,7 @@ void test_prod_id(void) {
 void test_accel_once(void) {
     print("\nGetting acceleration...\n\n");
 
-    int16_t x = 0, y = 0, z = 0;
+    uint16_t x = 0, y = 0, z = 0;
     if (!get_imu_accel(&x, &y, &z)) {
         print("\nGet acceleration: FAIL\n\n");
         return;
@@ -69,7 +71,7 @@ void test_accel_inf(void) {
 }
 
 void test_accel_fast_once(void) {
-    int16_t x = 0, y = 0, z = 0;
+    uint16_t x = 0, y = 0, z = 0;
     get_imu_accel(&x, &y, &z);
     print("Acceleration: x = %+.6f, y = %+.6f, z = %+.6f\n",
         imu_raw_data_to_double(x, IMU_ACCEL_Q),
@@ -80,8 +82,8 @@ void test_accel_fast_once(void) {
 void test_uncal_gyro_once(void) {
     print("\nGetting uncalibrated gyroscope...\n\n");
 
-    int16_t x = 0, y = 0, z = 0;
-    int16_t bias_x = 0, bias_y = 0, bias_z = 0;
+    uint16_t x = 0, y = 0, z = 0;
+    uint16_t bias_x = 0, bias_y = 0, bias_z = 0;
     if (!get_imu_uncal_gyro(&x, &y, &z, &bias_x, &bias_y, &bias_z)) {
         print("\nGet uncalibrated gyroscope: FAIL\n\n");
         return;
@@ -91,14 +93,14 @@ void test_uncal_gyro_once(void) {
     print("Get uncalibrated gyroscope: SUCCESS\n");
     print("Raw: x = %d, y = %d, z = %d\n", x, y, z);
     print("Converted: x = %.6f, y = %.6f, z = %.6f\n",
-        imu_raw_data_to_double(x, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(y, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(z, IMU_UNCAL_GYRO_Q));
+        imu_raw_data_to_gyro(x),
+        imu_raw_data_to_gyro(y),
+        imu_raw_data_to_gyro(z));
     print("Raw: bias_x = %d, bias_y = %d, bias_z = %d\n", bias_x, bias_y, bias_z);
     print("Converted: bias_x = %.6f, bias_y = %.6f, bias_z = %.6f\n",
-        imu_raw_data_to_double(bias_x, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(bias_y, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(bias_z, IMU_UNCAL_GYRO_Q));
+        imu_raw_data_to_gyro(bias_x),
+        imu_raw_data_to_gyro(bias_y),
+        imu_raw_data_to_gyro(bias_z));
     print("\n");
 }
 
@@ -110,18 +112,18 @@ void test_uncal_gyro_inf(void) {
 }
 
 void test_uncal_gyro_fast_once(void) {
-    int16_t x = 0, y = 0, z = 0;
+    uint16_t x = 0, y = 0, z = 0;
     get_imu_uncal_gyro(&x, &y, &z, NULL, NULL, NULL);
     print("Uncalibrated Gyroscope: x = %+.6f, y = %+.6f, z = %+.6f\n",
-        imu_raw_data_to_double(x, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(y, IMU_UNCAL_GYRO_Q),
-        imu_raw_data_to_double(z, IMU_UNCAL_GYRO_Q));
+        imu_raw_data_to_gyro(x),
+        imu_raw_data_to_gyro(y),
+        imu_raw_data_to_gyro(z));
 }
 
 void test_cal_gyro_once(void) {
     print("\nGetting calibrated gyroscope...\n\n");
 
-    int16_t x = 0, y = 0, z = 0;
+    uint16_t x = 0, y = 0, z = 0;
     if (!get_imu_cal_gyro(&x, &y, &z)) {
         print("\nGet calibrated gyroscope.: FAIL\n\n");
         return;
@@ -131,9 +133,9 @@ void test_cal_gyro_once(void) {
     print("Get calibrated gyroscope.: SUCCESS\n");
     print("Raw: x = %d, y = %d, z = %d\n", x, y, z);
     print("Converted: x = %.6f, y = %.6f, z = %.6f\n",
-        imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
-        imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
-        imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+        imu_raw_data_to_gyro(x),
+        imu_raw_data_to_gyro(y),
+        imu_raw_data_to_gyro(z));
     print("\n");
 }
 
@@ -146,12 +148,12 @@ void test_cal_gyro_inf(void) {
 
 // Without success/fail print statements
 void test_cal_gyro_fast_once(void) {
-    int16_t x = 0, y = 0, z = 0;
+    uint16_t x = 0, y = 0, z = 0;
     get_imu_cal_gyro(&x, &y, &z);
     print("Calibrated Gyroscope: x = %+.6f, y = %+.6f, z = %+.6f\n",
-        imu_raw_data_to_double(x, IMU_CAL_GYRO_Q),
-        imu_raw_data_to_double(y, IMU_CAL_GYRO_Q),
-        imu_raw_data_to_double(z, IMU_CAL_GYRO_Q));
+        imu_raw_data_to_gyro(x),
+        imu_raw_data_to_gyro(y),
+        imu_raw_data_to_gyro(z));
 }
 
 // Compare uncalibrated with calibrated
@@ -159,25 +161,25 @@ void test_gyro_comp_inf(void) {
     print("\nGetting gyroscope...\n\n");
 
     while (1) {
-        int16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
-        int16_t bias_x = 0, bias_y = 0, bias_z = 0;
+        uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
+        uint16_t bias_x = 0, bias_y = 0, bias_z = 0;
         get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, &bias_x, &bias_y, &bias_z);
-        int16_t cal_x = 0, cal_y = 0, cal_z = 0;
+        uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
         get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
 
         print("\n");
         print("Uncalibrated: x = %+.6f, y = %+.6f, z = %+.6f\n",
-            imu_raw_data_to_double(uncal_x, IMU_UNCAL_GYRO_Q),
-            imu_raw_data_to_double(uncal_y, IMU_UNCAL_GYRO_Q),
-            imu_raw_data_to_double(uncal_z, IMU_UNCAL_GYRO_Q));
+            imu_raw_data_to_gyro(uncal_x),
+            imu_raw_data_to_gyro(uncal_y),
+            imu_raw_data_to_gyro(uncal_z));
         print("Calibrated:   x = %+.6f, y = %+.6f, z = %+.6f\n",
-            imu_raw_data_to_double(cal_x, IMU_CAL_GYRO_Q),
-            imu_raw_data_to_double(cal_y, IMU_CAL_GYRO_Q),
-            imu_raw_data_to_double(cal_z, IMU_CAL_GYRO_Q));
+            imu_raw_data_to_gyro(cal_x),
+            imu_raw_data_to_gyro(cal_y),
+            imu_raw_data_to_gyro(cal_z));
         print("Bias:         x = %+.6f, y = %+.6f, z = %+.6f\n",
-            imu_raw_data_to_double(bias_x, IMU_UNCAL_GYRO_Q),
-            imu_raw_data_to_double(bias_y, IMU_UNCAL_GYRO_Q),
-            imu_raw_data_to_double(bias_z, IMU_UNCAL_GYRO_Q));
+            imu_raw_data_to_gyro(bias_x),
+            imu_raw_data_to_gyro(bias_y),
+            imu_raw_data_to_gyro(bias_z));
     }
 }
 
