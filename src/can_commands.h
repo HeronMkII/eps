@@ -11,6 +11,7 @@
 #include "can_interface.h"
 #include "devices.h"
 #include "general.h"
+#include "imu.h"
 
 extern queue_t can_rx_msg_queue;
 extern queue_t can_tx_msg_queue;

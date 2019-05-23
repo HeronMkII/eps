@@ -86,8 +86,8 @@ void print_therm_temp(uint16_t raw_data) {
     print(" 0x%.3X = %.2f C\n", raw_data, adc_raw_data_to_therm_temp(raw_data));
 }
 
-void print_imu_data(uint16_t raw_data) {
-    print(" 0x%.4X\n", raw_data);
+void print_imu_gyro(uint16_t raw_data) {
+    print(" 0x%.4X = %.3f rad/s\n", raw_data, imu_raw_data_to_gyro(raw_data));
 }
 
 void process_eps_hk_tx_msg(uint8_t* tx_msg) {
@@ -154,41 +154,29 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             print("Heater Setpoint 2:");
             print_therm_temp(raw_data);
             break;
-        case CAN_EPS_HK_IMU_ACC_X:
-            print("Acc X:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_UNCAL_X:
+            print("Gyro (Uncal) X:");
+            print_imu_gyro(raw_data);
             break;
-        case CAN_EPS_HK_IMU_ACC_Y:
-            print("Acc Y:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_UNCAL_Y:
+            print("Gyro (Uncal) Y:");
+            print_imu_gyro(raw_data);
             break;
-        case CAN_EPS_HK_IMU_ACC_Z:
-            print("Acc Z:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_UNCAL_Z:
+            print("Gyro (Uncal) Z:");
+            print_imu_gyro(raw_data);
             break;
-        case CAN_EPS_HK_IMU_GYR_X:
-            print("Gyr X:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_CAL_X:
+            print("Gyro (Cal) X:");
+            print_imu_gyro(raw_data);
             break;
-        case CAN_EPS_HK_IMU_GYR_Y:
-            print("Gyr Y:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_CAL_Y:
+            print("Gyro (Cal) Y:");
+            print_imu_gyro(raw_data);
             break;
-        case CAN_EPS_HK_IMU_GYR_Z:
-            print("Gyr Z:");
-            print_imu_data(raw_data);
-            break;
-        case CAN_EPS_HK_IMU_MAG_X:
-            print("Mag X:");
-            print_imu_data(raw_data);
-            break;
-        case CAN_EPS_HK_IMU_MAG_Y:
-            print("Mag Y:");
-            print_imu_data(raw_data);
-            break;
-        case CAN_EPS_HK_IMU_MAG_Z:
-            print("Mag Z:");
-            print_imu_data(raw_data);
+        case CAN_EPS_HK_GYR_CAL_Z:
+            print("Gyro (Cal) Z:");
+            print_imu_gyro(raw_data);
             break;
         default:
             return;
@@ -353,12 +341,13 @@ int main(void) {
     WDT_ENABLE_SYS_RESET(WDTO_8S);
 
     init_eps();
+    set_uart_baud_rate(UART_BAUD_115200);
 
     print("\n\n\nStarting commands test\n\n");
 
     // Change these as necessary for testing
     sim_local_actions = false;
-    sim_obc = false;
+    sim_obc = true;
     print_can_msgs = true;
 
     print("sim_local_actions = %u\n", sim_local_actions);

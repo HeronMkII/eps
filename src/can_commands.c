@@ -79,10 +79,52 @@ void handle_rx_hk(uint8_t* rx_msg) {
         }
     }
 
-    else if ((CAN_EPS_HK_IMU_ACC_X <= field_num) &&
-            (field_num <= CAN_EPS_HK_IMU_MAG_Z)) {
-        // TODO - get IMU data
-        data = random() & 0x7FFF;
+    else if ((CAN_EPS_HK_GYR_UNCAL_X <= field_num) &&
+            (field_num <= CAN_EPS_HK_GYR_UNCAL_Z)) {
+        if (sim_local_actions) {
+            data = random() & 0x7FFF;
+        } else {
+            uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
+            get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, NULL, NULL, NULL);
+
+            switch (field_num) {
+                case CAN_EPS_HK_GYR_UNCAL_X:
+                    data = (uint32_t) uncal_x;
+                    break;
+                case CAN_EPS_HK_GYR_UNCAL_Y:
+                    data = (uint32_t) uncal_y;
+                    break;
+                case CAN_EPS_HK_GYR_UNCAL_Z:
+                    data = (uint32_t) uncal_z;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    else if ((CAN_EPS_HK_GYR_CAL_X <= field_num) &&
+            (field_num <= CAN_EPS_HK_GYR_CAL_Z)) {
+        if (sim_local_actions) {
+            data = random() & 0x7FFF;
+        } else {
+            uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
+            get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
+
+            switch (field_num) {
+                case CAN_EPS_HK_GYR_CAL_X:
+                    data = (uint32_t) cal_x;
+                    break;
+                case CAN_EPS_HK_GYR_CAL_Y:
+                    data = (uint32_t) cal_y;
+                    break;
+                case CAN_EPS_HK_GYR_CAL_Z:
+                    data = (uint32_t) cal_z;
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     // If the message type is not recognized, return before enqueueing
