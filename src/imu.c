@@ -509,25 +509,13 @@ uint8_t disable_imu_feat(uint8_t feat_report_id) {
     return send_imu_set_feat_cmd(feat_report_id, 0);
 }
 
-/*
-Converts the raw 16-bit signed fixed-point value from the input report to the actual floating-point measurement using the Q point.
-Q point - number of fractional digits after (to the right of) the decimal point, i.e. higher Q point means smaller/more precise number (#1 p.22)
-https://en.wikipedia.org/wiki/Q_(number_format)
-Similar to reference library qToFloat()
-raw_data - 16 bit raw value
-q_point - number of binary digits to shift
-*/
-double imu_raw_data_to_double(int16_t raw_data, uint8_t q_point) {
-    // Implement power of 2 with a bitshift instead of pow(), which links to the
-    // math library and increases the binary size by ~1.3kB
-    return ((double) raw_data) / ((double) (1 << q_point));
-}
+
 
 /*
 Enables a feature, gets one input report, and disables the feature.
 This only works for features that provide an input report of 5 bytes (timebase reference) + 10 bytes (sensor data, last 6 bytes are x/y/z)
 */
-uint8_t get_imu_data(uint8_t feat_report_id, int16_t* x, int16_t* y, int16_t* z) {
+uint8_t get_imu_data(uint8_t feat_report_id, uint16_t* x, uint16_t* y, uint16_t* z) {
     // Send set feature command, receive get feature response
     if (!enable_imu_feat(feat_report_id)) {
         return 0;
@@ -576,7 +564,7 @@ uint8_t get_imu_data(uint8_t feat_report_id, int16_t* x, int16_t* y, int16_t* z)
 x, y, z are signed fixed-point
 "The units are m/s^2. The Q point is 8." (#1 p.58)
 */
-uint8_t get_imu_accel(int16_t* x, int16_t* y, int16_t* z) {
+uint8_t get_imu_accel(uint16_t* x, uint16_t* y, uint16_t* z) {
     return get_imu_data(IMU_ACCEL, x, y, z);
 }
 
@@ -587,7 +575,7 @@ Calibrated gyroscope - drift-compensated rotational velocity
 
 x, y, z are signed fixed-point
 */
-uint8_t get_imu_cal_gyro(int16_t* x, int16_t* y, int16_t* z) {
+uint8_t get_imu_cal_gyro(uint16_t* x, uint16_t* y, uint16_t* z) {
     return get_imu_data(IMU_CAL_GYRO, x, y, z);
 }
 
@@ -600,8 +588,8 @@ x, y, z are signed fixed-point
 
 This does not use `get_imu_data()` because its input report format is different.
 */
-uint8_t get_imu_uncal_gyro(int16_t* x, int16_t* y, int16_t* z, int16_t* bias_x, 
-    int16_t* bias_y, int16_t* bias_z) {
+uint8_t get_imu_uncal_gyro(uint16_t* x, uint16_t* y, uint16_t* z, uint16_t* bias_x, 
+    uint16_t* bias_y, uint16_t* bias_z) {
     
     // Send set feature command, receive get feature response
     if (!enable_imu_feat(IMU_UNCAL_GYRO)) {
