@@ -159,20 +159,6 @@ uint8_t imu_data[IMU_DATA_MAX_LEN] = { 0x00 };
 uint16_t imu_data_len = 0;
 
 
-
-
-// TODO - modify lib-common print_bytes, fix uint16_t bug for len/i
-void print_hex(uint8_t* data, uint16_t len) {
-    if (len == 0) {
-        return;
-    }
-    print("%.2x", data[0]);
-    for (uint16_t i = 1; i < len; i++) {
-        print(":%.2x", data[i]);
-    }
-    print("\n");
-}
-
 /*
 Initializes the IMU (#0 p. 43).
 */
@@ -361,9 +347,9 @@ uint8_t receive_imu_packet(void) {
 #ifdef IMU_DEBUG
     print("data_len = %u\n", data_len);
     print("Header: ");
-    print_hex(imu_header, IMU_HEADER_LEN);
+    print_bytes(imu_header, IMU_HEADER_LEN);
     print("Data: ");
-    print_hex(imu_data, imu_data_len);
+    print_bytes(imu_data, imu_data_len);
 
     // Print data as string
     // for (uint16_t i = 0; i < imu_data_len; i++) {
@@ -407,9 +393,9 @@ uint8_t send_imu_packet(uint8_t channel) {
 #ifdef IMU_DEBUG
     print("\nSending IMU SPI:\n");
     print("Header: ");
-    print_hex(imu_header, IMU_HEADER_LEN);
+    print_bytes(imu_header, IMU_HEADER_LEN);
     print("Data: ");
-    print_hex(imu_data, imu_data_len);
+    print_bytes(imu_data, imu_data_len);
 #endif
 
     // Set feature command (#1 p.55-56)
