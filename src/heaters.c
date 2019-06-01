@@ -11,6 +11,19 @@ Datasheet: https://www.st.com/content/ccc/resource/technical/document/datasheet/
 
 #include "heaters.h"
 
+#include <stdbool.h>
+
+#include <adc/adc.h>
+#include <uart/uart.h>
+
+#include "../../src/devices.h"
+#include "../../src/heaters.h"
+#include "../../src/measurements.h"
+
+#define SETPOINT_SHADOW     20 //Celcius
+#define SETPOINT_SUN        5 //Celcius
+#define CURRENT_THRESHOLD   1 //Amps
+
 // init is covered by dac_init()
 
 // Sets temperature setpoint of heater 1 (connected to DAC A)
@@ -56,4 +69,35 @@ void init_heaters() {
     }
     set_heater_1_raw_setpoint(heater_1_last_setpoint);
     set_heater_2_raw_setpoint(heater_2_last_setpoint);
+}
+
+void read_current(uint8_t channel) {
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double current = adc_raw_data_to_eps_cur(raw_data);
+    print(", %.6f", current);
+    return current;
+}
+
+void change_setpoint(setpoint){
+    set_heater_1_temp_setpoint(setpoint);
+    print(", %.6f", setpoint);
+    set_heater_2_temp_setpoint(setpoint);
+    print(", %.6f", setpoint);
+}
+
+//when called, will check if setpoint needs to be changed and then do so if needed
+void sunorshadow_setpoint(){
+    double total_current = 0;
+    total_current += read_current(MEAS_NEG_Y_IOUT);
+    total_current += read_current(MEAS_POS_X_IOUT);
+    total_current += read_current(MEAS_POS_Y_IOUT);
+    total_current += read_current(MEAS_NEG_X_IOUT);
+            
+    if (total_current > CURRENT_THRESHOLD) { //In the sun
+    change_setpoint(SETPOINT_SUN);
+    } else {
+        change_setpoint(SETPOINT_SHADOW);
+        }
+
 }
