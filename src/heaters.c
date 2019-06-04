@@ -20,9 +20,13 @@ Datasheet: https://www.st.com/content/ccc/resource/technical/document/datasheet/
 #include "../../src/heaters.h"
 #include "../../src/measurements.h"
 
-#define SETPOINT_SHADOW     20 //Celcius
-#define SETPOINT_SUN        5 //Celcius
-#define CURRENT_THRESHOLD   1 //Amps
+#define SETPOINT_SHADOW_HEATER1             20   //Celcius
+#define SETPOINT_SHADOW_HEATER2             20   //Celcius
+#define SETPOINT_SUN_HEATER1                5    //Celcius
+#define SETPOINT_SUN_HEATER2                5    //Celcius
+
+double current_threshold_upper = 1    //Amps
+double current_threshold_lower = 0.95 //Amps
 
 // init is covered by dac_init()
 
@@ -79,25 +83,29 @@ void read_current(uint8_t channel) {
     return current;
 }
 
-void change_setpoint(setpoint){
-    set_heater_1_temp_setpoint(setpoint);
-    print(", %.6f", setpoint);
-    set_heater_2_temp_setpoint(setpoint);
-    print(", %.6f", setpoint);
+void change_setpoint(setpoint1, setpoint2)
+{
+    set_heater_1_temp_setpoint(setpoint1);
+    print(", %.6f", setpoint1);
+    set_heater_2_temp_setpoint(setpoint2);
+    print(", %.6f", setpoint2);
 }
 
 //when called, will check if setpoint needs to be changed and then do so if needed
-void sunorshadow_setpoint(){
+void sunorshadow_setpoint()
+{
     double total_current = 0;
     total_current += read_current(MEAS_NEG_Y_IOUT);
     total_current += read_current(MEAS_POS_X_IOUT);
     total_current += read_current(MEAS_POS_Y_IOUT);
     total_current += read_current(MEAS_NEG_X_IOUT);
-            
-    if (total_current > CURRENT_THRESHOLD) { //In the sun
-    change_setpoint(SETPOINT_SUN);
-    } else {
-        change_setpoint(SETPOINT_SHADOW);
-        }
 
+    if (total_current > current_threshold_upper)
+    { //In the sun
+        change_setpoint(SETPOINT_SUN_HEATER1, SETPOINT_SUN_HEATER2);
+    }
+    else if (total_current < current_threshold_lower)
+    {
+        change_setpoint(SETPOINT_SHADOW_HEATER1, SETPOINT_SHADOW_HEATER2);
+    }
 }
