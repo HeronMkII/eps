@@ -16,6 +16,7 @@ void set_heater_2_raw_setpoint(uint16_t raw_data);
 
 void set_heater_1_temp_setpoint(double temp);
 void set_heater_2_temp_setpoint(double temp);
+double read_current(uint8_t channel);
 void sunorshadow_setpoint();
 
 void init_heaters();

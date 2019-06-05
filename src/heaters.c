@@ -9,24 +9,22 @@ Digikey Link: https://www.digikey.ca/product-detail/en/stmicroelectronics/TS391I
 Datasheet: https://www.st.com/content/ccc/resource/technical/document/datasheet/de/4c/b3/3d/64/7d/48/8e/CD00001660.pdf/files/CD00001660.pdf/jcr:content/translations/en.CD00001660.pdf
 */
 
-#include "heaters.h"
-
 #include <stdbool.h>
 
 #include <adc/adc.h>
 #include <uart/uart.h>
 
-#include "../../src/devices.h"
-#include "../../src/heaters.h"
-#include "../../src/measurements.h"
+#include "devices.h"
+#include "heaters.h"
+#include "measurements.h"
 
 #define SETPOINT_SHADOW_HEATER1             20   //Celcius
 #define SETPOINT_SHADOW_HEATER2             20   //Celcius
 #define SETPOINT_SUN_HEATER1                5    //Celcius
 #define SETPOINT_SUN_HEATER2                5    //Celcius
 
-double current_threshold_upper = 1    //Amps
-double current_threshold_lower = 0.95 //Amps
+double current_threshold_upper = 1;    //Amps
+double current_threshold_lower = 0.95; //Amps
 
 // init is covered by dac_init()
 
@@ -75,7 +73,7 @@ void init_heaters() {
     set_heater_2_raw_setpoint(heater_2_last_setpoint);
 }
 
-void read_current(uint8_t channel) {
+double read_current(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double current = adc_raw_data_to_eps_cur(raw_data);
@@ -83,7 +81,7 @@ void read_current(uint8_t channel) {
     return current;
 }
 
-void change_setpoint(setpoint1, setpoint2)
+void change_setpoint(int setpoint1, int setpoint2)
 {
     set_heater_1_temp_setpoint(setpoint1);
     print(", %.6f", setpoint1);

@@ -87,12 +87,7 @@ void read_voltage(uint8_t channel) {
     print(", %.6f", voltage);
 }
 
-void read_current(uint8_t channel) {
-    fetch_adc_channel(&adc, channel);
-    uint16_t raw_data = read_adc_channel(&adc, channel);
-    double current = adc_raw_data_to_eps_cur(raw_data);
-    print(", %.6f", current);
-}
+// read_current function definition now sits in heaters.c and returns the current value too
 
 void read_therm(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
