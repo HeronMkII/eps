@@ -24,6 +24,15 @@ void read_current(char* name, uint8_t channel) {
             name, channel, raw_data, raw_voltage, current);
 }
 
+void read_bat_current(char* name, uint8_t channel) {
+    fetch_adc_channel(&adc, channel);
+    uint16_t raw_data = read_adc_channel(&adc, channel);
+    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
+    double current = adc_raw_data_to_bat_cur(raw_data);
+    print("%s, %u, 0x%04x, %.6f V, %.6f A\n",
+            name, channel, raw_data, raw_voltage, current);
+}
+
 void read_therm(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
@@ -64,7 +73,7 @@ int main(void) {
         read_therm("THERM 1", MEAS_THERM_1);
         read_therm("THERM 2", MEAS_THERM_2);
         read_voltage("PACK VOUT", MEAS_PACK_VOUT);
-        read_current("PACK IOUT", MEAS_PACK_IOUT);
+        read_bat_current("PACK IOUT", MEAS_PACK_IOUT);
         read_current("BT IOUT", MEAS_BT_IOUT);
         read_voltage("BT VOUT", MEAS_BT_VOUT);
 

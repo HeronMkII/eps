@@ -82,6 +82,10 @@ void print_current(uint16_t raw_data) {
     print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_eps_cur(raw_data));
 }
 
+void print_bat_current(uint16_t raw_data) {
+    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_bat_cur(raw_data));
+}
+
 void print_therm_temp(uint16_t raw_data) {
     print(" 0x%.3X = %.2f C\n", raw_data, adc_raw_data_to_therm_temp(raw_data));
 }
@@ -136,7 +140,7 @@ void process_eps_hk_tx_msg(uint8_t* tx_msg) {
             break;
         case CAN_EPS_HK_BAT_CUR:
             print("Bat Cur:");
-            print_current(raw_data);
+            print_bat_current(raw_data);
             break;
         case CAN_EPS_HK_BT_CUR:
             print("BT Cur:");
