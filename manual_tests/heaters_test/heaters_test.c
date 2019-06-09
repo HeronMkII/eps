@@ -70,12 +70,12 @@ const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
 
 
 void set_heater_1(double temp) {
-    set_heater_1_temp_setpoint(temp);
+    set_heater_1_raw_shadow_setpoint(heater_setpoint_temp_to_raw(temp));
     print("Set heater 1 setpoint (DAC A) = %.1f C\n", temp);
 }
 
 void set_heater_2(double temp) {
-    set_heater_2_temp_setpoint(temp);
+    set_heater_2_raw_shadow_setpoint(heater_setpoint_temp_to_raw(temp));
     print("Set heater 2 setpoint (DAC B) = %.1f C\n", temp);
 }
 
@@ -87,7 +87,11 @@ void read_voltage(uint8_t channel) {
     print(", %.6f", voltage);
 }
 
-// read_current function definition now sits in heaters.c and returns the current value too
+// read_adc_current function definition now in heaters.c and returns the current value
+void read_current(uint8_t channel) {			
+    double current = read_eps_cur(channel);
+    print(", %.6f", current);		
+}
 
 void read_therm(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
