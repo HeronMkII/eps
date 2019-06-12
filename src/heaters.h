@@ -7,15 +7,34 @@
 #include "devices.h"
 
 //EEPROM address for storing raw data
-#define HEATER_1_RAW_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x70)
-#define HEATER_2_RAW_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x74)
-#define HEATER_1_RAW_SUN_SETPOINT_ADDR      ((uint32_t*) 0x78)
-#define HEATER_2_RAW_SUN_SETPOINT_ADDR      ((uint32_t*) 0x7C)
+#define HEATER_1_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x70)
+#define HEATER_2_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x74)
+#define HEATER_1_SUN_SETPOINT_ADDR      ((uint32_t*) 0x78)
+#define HEATER_2_SUN_SETPOINT_ADDR      ((uint32_t*) 0x7C)
+#define HEATER_CUR_THRESH_UPPER_ADDR    ((uint32_t*) 0x80)
+#define HEATER_CUR_THRESH_LOWER_ADDR    ((uint32_t*) 0x84)
 
-#define HEATER_1_STANDARD_SHADOW_SETPOINT   20   //Celsius
-#define HEATER_2_STANDARD_SHADOW_SETPOINT   20   //Celsius
-#define HEATER_1_STANDARD_SUN_SETPOINT      5    //Celsius
-#define HEATER_2_STANDARD_SUN_SETPOINT      5    //Celsius
+#define HEATER_SETPOINT_COUNT 4
+
+// Default setpoints
+#define HEATER_1_DEF_SHADOW_SETPOINT   20   //Celsius
+#define HEATER_2_DEF_SHADOW_SETPOINT   20   //Celsius
+#define HEATER_1_DEF_SUN_SETPOINT      5    //Celsius
+#define HEATER_2_DEF_SUN_SETPOINT      5    //Celsius
+
+// In amps
+#define HEATER_SUN_CUR_THRESH_UPPER 1.00
+#define HEATER_SUN_CUR_THRESH_LOWER 0.95
+
+#define HEATER_CUR_THRESH_RATIO 1000.0
+
+
+typedef struct {
+    // Setpoint - raw 12-bit DAC format
+    // Current threshold - +1 = +1 mA
+    uint16_t raw;
+    uint32_t* eeprom_addr;
+} heater_val_t;
 
 typedef enum {
     HEATER_MODE_SHADOW,
@@ -24,28 +43,30 @@ typedef enum {
 
 
 // Setpoints for different shadow/sun conditions (in raw 12-bit format)
-extern uint16_t heater_1_raw_shadow_setpoint;
-extern uint16_t heater_2_raw_shadow_setpoint;
-extern uint16_t heater_1_raw_sun_setpoint;
-extern uint16_t heater_2_raw_sun_setpoint;
+extern heater_val_t heater_1_shadow_setpoint;
+extern heater_val_t heater_2_shadow_setpoint;
+extern heater_val_t heater_1_sun_setpoint;
+extern heater_val_t heater_2_sun_setpoint;
 
-extern double heater_sun_cur_thresh_upper;
-extern double heater_sun_cur_thresh_lower;
+extern heater_val_t heater_sun_cur_thresh_upper;
+extern heater_val_t heater_sun_cur_thresh_lower;
 
 extern heater_mode_t heater_mode;
 
 
 void init_heaters(void);
+uint32_t read_eeprom(uint32_t* addr, uint32_t default_val);
 
-void set_heater_1_raw_shadow_setpoint(uint16_t raw_data);
-void set_heater_2_raw_shadow_setpoint(uint16_t raw_data);
-void set_heater_1_raw_sun_setpoint(uint16_t raw_data);
-void set_heater_2_raw_sun_setpoint(uint16_t raw_data);
+void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data);
+void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data);
 
+double heater_setpoint_raw_to_temp(uint16_t raw_data);
 uint16_t heater_setpoint_temp_to_raw(double temp);
-double read_eps_cur(uint8_t channel);
+double heater_cur_thresh_raw_to_cur(uint16_t raw_data);
+uint16_t heater_cur_thresh_cur_to_raw(double current);
 
-void update_heater_setpoints(void);
+double read_eps_cur(uint8_t channel);
+void update_heater_setpoint_outputs(void);
 void control_heater_mode(void);
 
 #endif
