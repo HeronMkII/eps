@@ -26,12 +26,9 @@
 #define HEATER_SUN_CUR_THRESH_UPPER 1.00
 #define HEATER_SUN_CUR_THRESH_LOWER 0.95
 
-#define HEATER_CUR_THRESH_RATIO 1000.0
-
 
 typedef struct {
-    // Setpoint - raw 12-bit DAC format
-    // Current threshold - +1 = +1 mA
+    // Raw 12-bit DAC format
     uint16_t raw;
     uint32_t* eeprom_addr;
 } heater_val_t;
@@ -59,9 +56,6 @@ uint32_t read_eeprom(uint32_t* addr, uint32_t default_val);
 
 void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data);
 void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data);
-
-double heater_setpoint_raw_to_temp(uint16_t raw_data);
-uint16_t heater_setpoint_temp_to_raw(double temp);
 
 double read_eps_cur(uint8_t channel);
 void update_heater_setpoint_outputs(void);
