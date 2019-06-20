@@ -13,43 +13,53 @@ Also display thermistor measurements.
 #include "../../src/measurements.h"
 
 
+// This is for an "active" or "non-active" setpoint
+void read_setpoint(char* str, uint16_t raw_voltage) {
+    print("%s: %.6f C\n", str, dac_raw_data_to_heater_setpoint(raw_voltage));
+}
+
+void read_cur_thresh(char* str, uint16_t raw_cur) {
+    print("%s: %.6f A\n", str, adc_raw_data_to_eps_cur(raw_cur));
+}
+
 void read_current(char* str, uint8_t channel) {			
     double current = read_eps_cur(channel);
-    print("%s: %.6f\n", str, current);		
+    print("%s: %.6f A\n", str, current);		
+}
+
+void read_current_sum(char* str) {
+    double current =
+        read_eps_cur(MEAS_NEG_Y_IOUT) +
+        read_eps_cur(MEAS_POS_X_IOUT) +
+        read_eps_cur(MEAS_POS_Y_IOUT) +
+        read_eps_cur(MEAS_NEG_X_IOUT);
+    print("%s: %.6f A\n", str, current);
 }
 
 void read_therm(char* str, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double temp = adc_raw_data_to_therm_temp(raw_data);
-    print("%s: %.6f\n", str, temp);
-}
-
-// This is for an "active" or "non-active" setpoint
-void read_setpoint(char* str, uint16_t raw_voltage) {
-    print("%s: %.6f\n", str, dac_raw_data_to_heater_setpoint(raw_voltage));
-}
-
-void read_cur_thresh(char* str, uint16_t raw_cur) {
-    print("%s: %.6f\n", str, adc_raw_data_to_eps_cur(raw_cur));
+    print("%s: %.6f C\n", str, temp);
 }
 
 void read_data(void) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        read_setpoint("Header 1 shadow (C)", heater_1_shadow_setpoint.raw);
-        read_setpoint("Header 2 shadow (C)", heater_2_shadow_setpoint.raw);
-        read_setpoint("Header 1 sun (C)", heater_1_sun_setpoint.raw);
-        read_setpoint("Header 2 sun (C)", heater_2_sun_setpoint.raw);
-        read_cur_thresh("Upper current threshold (A)", heater_sun_cur_thresh_upper.raw);
-        read_cur_thresh("Lower current threshold (A)", heater_sun_cur_thresh_lower.raw);
-        read_current("-Y Cur (A)", MEAS_NEG_Y_IOUT);
-        read_current("+X Cur (A)", MEAS_POS_X_IOUT);
-        read_current("+Y Cur (A)", MEAS_POS_Y_IOUT);
-        read_current("-X Cur (A)", MEAS_NEG_X_IOUT);
-        read_therm("Temp 1 (C)", MEAS_THERM_1);
-        read_therm("Temp 2 (C)", MEAS_THERM_2);
-        read_setpoint("Setpoint 1 (C)", dac.raw_voltage_a);
-        read_setpoint("Setpoint 2 (C)", dac.raw_voltage_b);
+        read_setpoint("Header 1 shadow", heater_1_shadow_setpoint.raw);
+        read_setpoint("Header 2 shadow", heater_2_shadow_setpoint.raw);
+        read_setpoint("Header 1 sun", heater_1_sun_setpoint.raw);
+        read_setpoint("Header 2 sun", heater_2_sun_setpoint.raw);
+        read_cur_thresh("Upper current threshold", heater_sun_cur_thresh_upper.raw);
+        read_cur_thresh("Lower current threshold", heater_sun_cur_thresh_lower.raw);
+        read_current("-Y Cur", MEAS_NEG_Y_IOUT);
+        read_current("+X Cur", MEAS_POS_X_IOUT);
+        read_current("+Y Cur", MEAS_POS_Y_IOUT);
+        read_current("-X Cur", MEAS_NEG_X_IOUT);
+        read_current_sum("Sum Cur");
+        read_therm("Temp 1", MEAS_THERM_1);
+        read_therm("Temp 2", MEAS_THERM_2);
+        read_setpoint("Setpoint 1", dac.raw_voltage_a);
+        read_setpoint("Setpoint 2", dac.raw_voltage_b);
         print("\n");
     }
 }
@@ -128,13 +138,12 @@ int main(void) {
 
     set_uart_rx_cb(uart_cb);
     print_cmds();
-    print("Press h to list commands\n");
+    print("Press h to list commands\n\n");
 
     while (1) {
         read_data();
         control_heater_mode();
-        print("\n");
-        _delay_ms(5000);
+        _delay_ms(3000);
     }
 
     return 0;
