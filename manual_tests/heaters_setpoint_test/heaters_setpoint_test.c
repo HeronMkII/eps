@@ -27,11 +27,11 @@ void read_therm(char* str, uint8_t channel) {
 
 // This is for an "active" or "non-active" setpoint
 void read_setpoint(char* str, uint16_t raw_voltage) {
-    print("%s: %.6f\n", str, heater_setpoint_raw_to_temp(raw_voltage));
+    print("%s: %.6f\n", str, dac_raw_data_to_heater_setpoint(raw_voltage));
 }
 
 void read_cur_thresh(char* str, uint16_t raw_cur) {
-    print("%s: %.6f\n", str, heater_cur_thresh_raw_to_cur(raw_cur));
+    print("%s: %.6f\n", str, adc_raw_data_to_eps_cur(raw_cur));
 }
 
 void read_data(void) {
@@ -57,20 +57,20 @@ void read_data(void) {
 
 void set_setpoints(float shadow, float sun) {
     set_raw_heater_setpoint(&heater_1_shadow_setpoint,
-        heater_setpoint_temp_to_raw(shadow));
+        heater_setpoint_to_dac_raw_data(shadow));
     set_raw_heater_setpoint(&heater_2_shadow_setpoint,
-        heater_setpoint_temp_to_raw(shadow));
+        heater_setpoint_to_dac_raw_data(shadow));
     set_raw_heater_setpoint(&heater_1_sun_setpoint,
-        heater_setpoint_temp_to_raw(sun));
+        heater_setpoint_to_dac_raw_data(sun));
     set_raw_heater_setpoint(&heater_2_sun_setpoint,
-        heater_setpoint_temp_to_raw(sun));
+        heater_setpoint_to_dac_raw_data(sun));
 }
 
 void set_cur_threshes(float upper, float lower) {
     set_raw_heater_cur_thresh(&heater_sun_cur_thresh_upper,
-        heater_cur_thresh_cur_to_raw(upper));
+        adc_eps_cur_to_raw_data(upper));
     set_raw_heater_cur_thresh(&heater_sun_cur_thresh_lower,
-        heater_cur_thresh_cur_to_raw(lower));
+        adc_eps_cur_to_raw_data(lower));
 }
 
 void print_cmds(void) {

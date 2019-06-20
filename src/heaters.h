@@ -62,8 +62,6 @@ void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data);
 
 double heater_setpoint_raw_to_temp(uint16_t raw_data);
 uint16_t heater_setpoint_temp_to_raw(double temp);
-double heater_cur_thresh_raw_to_cur(uint16_t raw_data);
-uint16_t heater_cur_thresh_cur_to_raw(double current);
 
 double read_eps_cur(uint8_t channel);
 void update_heater_setpoint_outputs(void);

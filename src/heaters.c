@@ -53,16 +53,16 @@ void init_heaters(void) {
     // Read setpoints
     heater_1_shadow_setpoint.raw = (uint16_t) read_eeprom(
         heater_1_shadow_setpoint.eeprom_addr,
-        heater_setpoint_temp_to_raw(HEATER_1_DEF_SHADOW_SETPOINT));
+        heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SHADOW_SETPOINT));
     heater_2_shadow_setpoint.raw = (uint16_t) read_eeprom(
         heater_2_shadow_setpoint.eeprom_addr,
-        heater_setpoint_temp_to_raw(HEATER_2_DEF_SHADOW_SETPOINT));
+        heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SHADOW_SETPOINT));
     heater_1_sun_setpoint.raw = (uint16_t) read_eeprom(
         heater_1_sun_setpoint.eeprom_addr,
-        heater_setpoint_temp_to_raw(HEATER_1_DEF_SUN_SETPOINT));
+        heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SUN_SETPOINT));
     heater_2_sun_setpoint.raw = (uint16_t) read_eeprom(
         heater_2_sun_setpoint.eeprom_addr,
-        heater_setpoint_temp_to_raw(HEATER_2_DEF_SUN_SETPOINT));
+        heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SUN_SETPOINT));
     
     // Don't need to call set_raw_heater_setpoint() to save to EEPROM because
     // when it restarts, it will use the default values again
@@ -70,10 +70,10 @@ void init_heaters(void) {
     // Read current thresholds
     heater_sun_cur_thresh_upper.raw = (uint16_t) read_eeprom(
         heater_sun_cur_thresh_upper.eeprom_addr,
-        heater_cur_thresh_cur_to_raw(HEATER_SUN_CUR_THRESH_UPPER));
+        adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_UPPER));
     heater_sun_cur_thresh_lower.raw = (uint16_t) read_eeprom(
         heater_sun_cur_thresh_lower.eeprom_addr,
-        heater_cur_thresh_cur_to_raw(HEATER_SUN_CUR_THRESH_LOWER));
+        adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_LOWER));
 
     update_heater_setpoint_outputs();
 }
@@ -99,39 +99,12 @@ void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data) {
 
 // Sets temperature setpoint of heater 1 (connected to DAC A)
 // raw_data - 12 bit DAC raw data for setpoint
-// TODO - refactor with above
 void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data) {
     cur_thresh->raw = raw_data;
     //save to EEPROM
     eeprom_write_dword(cur_thresh->eeprom_addr, cur_thresh->raw);
     update_heater_setpoint_outputs();
 }
-
-
-double heater_setpoint_raw_to_temp(uint16_t raw_data) {
-    double vol = dac_raw_data_to_vol(raw_data);
-    double res = therm_vol_to_res(vol);
-    double temp = therm_res_to_temp(res);
-    return temp;
-}
-
-// temp - in C
-// Returns - raw (12 bits)
-uint16_t heater_setpoint_temp_to_raw(double temp) {
-    double res = therm_temp_to_res(temp);
-    double vol = therm_res_to_vol(res);
-    uint16_t raw_data = dac_vol_to_raw_data(vol);
-    return raw_data;
-}
-
-double heater_cur_thresh_raw_to_cur(uint16_t raw_data) {
-    return ((double) raw_data) / HEATER_CUR_THRESH_RATIO;
-}
-
-uint16_t heater_cur_thresh_cur_to_raw(double current) {
-    return (uint16_t) (current * HEATER_CUR_THRESH_RATIO);
-}
-
 
 double read_eps_cur(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
@@ -141,11 +114,12 @@ double read_eps_cur(uint8_t channel) {
 }
 
 void update_heater_setpoint_outputs(void) {
-    // Use shadow as the default just in case
     if (heater_mode == HEATER_MODE_SUN) {
         set_dac_raw_voltage(&dac, DAC_A, heater_1_sun_setpoint.raw);
         set_dac_raw_voltage(&dac, DAC_B, heater_2_sun_setpoint.raw);
-    } else {
+    }
+    // Use shadow as the default just in case
+    else {
         set_dac_raw_voltage(&dac, DAC_A, heater_1_shadow_setpoint.raw);
         set_dac_raw_voltage(&dac, DAC_B, heater_2_shadow_setpoint.raw);
     }
@@ -160,10 +134,10 @@ void control_heater_mode(void) {
     total_current += read_eps_cur(MEAS_POS_Y_IOUT);
     total_current += read_eps_cur(MEAS_NEG_X_IOUT);
 
-    if (total_current > heater_cur_thresh_raw_to_cur(heater_sun_cur_thresh_upper.raw)) { //In the sun
+    if (total_current > adc_raw_data_to_eps_cur(heater_sun_cur_thresh_upper.raw)) { //In the sun
         heater_mode = HEATER_MODE_SUN;
     }
-    else if (total_current < heater_cur_thresh_raw_to_cur(heater_sun_cur_thresh_lower.raw)) {
+    else if (total_current < adc_raw_data_to_eps_cur(heater_sun_cur_thresh_lower.raw)) {
         heater_mode = HEATER_MODE_SHADOW;
     }
 
