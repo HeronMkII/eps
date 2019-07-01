@@ -127,6 +127,38 @@ void handle_rx_hk(uint8_t* rx_msg) {
         }
     }
 
+    else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP1) {
+        if (sim_local_actions) {
+            data = random() & 0x7FF;
+        } else {
+            data = heater_1_shadow_setpoint.raw;
+        }
+    }
+
+    else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP2) {
+        if (sim_local_actions) {
+            data = random() & 0x7FF;
+        } else {
+            data = heater_2_shadow_setpoint.raw;
+        }
+    }
+
+    else if (field_num == CAN_EPS_HK_HEAT_SUN_SP1) {
+        if (sim_local_actions) {
+            data = random() & 0x7FF;
+        } else {
+            data = heater_1_sun_setpoint.raw;
+        }
+    }
+
+    else if (field_num == CAN_EPS_HK_HEAT_SUN_SP2) {
+        if (sim_local_actions) {
+            data = random() & 0x7FF;
+        } else {
+            data = heater_2_sun_setpoint.raw;
+        }
+    }
+
     // If the message type is not recognized, return before enqueueing
     else {
         return;
@@ -151,21 +183,66 @@ void handle_rx_hk(uint8_t* rx_msg) {
 
 void handle_rx_ctrl(uint8_t* rx_msg) {
     uint8_t field_num = rx_msg[2];
-    uint32_t data =
+    // TODO - need 32 bit data
+    uint32_t rx_data =
         (((uint32_t) rx_msg[3]) << 16) |
         (((uint32_t) rx_msg[4]) << 8) |
         ((uint32_t) rx_msg[5]);
+    uint32_t tx_data = 0;
 
     // Check field number
-    if (field_num == CAN_EPS_CTRL_HEAT_SP1) {
-        set_dac_raw_voltage(&dac, DAC_A, (uint16_t) data);
+
+    if (field_num == CAN_EPS_CTRL_PING) {
+        // Don't need to do anything
+        // Just take care of the condition so we don't return early below
+    }
+    
+    else if (field_num == CAN_EPS_CTRL_HEAT_SHADOW_SP1) {
+        set_raw_heater_setpoint(&heater_1_shadow_setpoint, (uint16_t) rx_data);
+    }
+    else if (field_num == CAN_EPS_CTRL_HEAT_SHADOW_SP2) {
+        set_raw_heater_setpoint(&heater_2_shadow_setpoint, (uint16_t) rx_data);
+    }
+    else if (field_num == CAN_EPS_CTRL_HEAT_SUN_SP1) {
+        set_raw_heater_setpoint(&heater_1_sun_setpoint, (uint16_t) rx_data);
+    }
+    else if (field_num == CAN_EPS_CTRL_HEAT_SUN_SP2) {
+        set_raw_heater_setpoint(&heater_2_sun_setpoint, (uint16_t) rx_data);
     }
 
-    else if (field_num == CAN_EPS_CTRL_HEAT_SP2) {
-        set_dac_raw_voltage(&dac, DAC_B, (uint16_t) data);
+    else if (field_num == CAN_EPS_CTRL_HEAT_CUR_THRESH_LOWER) {
+        set_raw_heater_cur_thresh(&heater_sun_cur_thresh_lower, (uint16_t) rx_data);
+    }
+    else if (field_num == CAN_EPS_CTRL_HEAT_CUR_THRESH_UPPER) {
+        set_raw_heater_cur_thresh(&heater_sun_cur_thresh_upper, (uint16_t) rx_data);
     }
 
-    // If the field number is not recognized, return before enqueueing
+    else if (field_num == CAN_EPS_CTRL_RESET) {
+        // Program will stop here and restart from the beginning
+        reset_self_mcu(UPTIME_RESTART_REASON_RESET_CMD);
+    }
+
+    else if (field_num == CAN_EPS_CTRL_READ_EEPROM) {
+        // Received rx_data as a uint32_t but need to represent it as a uint32_t*, which the eeprom function requires
+        // Note that sizeof(uint32_t) = 4, sizeof(uint32_t*) = 2
+        // Need to case to uint16_T first or else we get
+        // warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
+        uint32_t* ptr = (uint32_t*) ((uint16_t) rx_data);
+        tx_data = eeprom_read_dword(ptr);
+    }
+
+    else if (field_num == CAN_EPS_CTRL_RESTART_COUNT) {
+        tx_data = restart_count;
+    }
+    else if (field_num == CAN_EPS_CTRL_RESTART_REASON) {
+        tx_data = restart_reason;
+    }
+    else if (field_num == CAN_EPS_CTRL_UPTIME) {
+        tx_data = uptime_s;
+    }
+
+    // If the field number is not recognized, return before enqueueing so we
+    // don't send anything back
     else {
         return;
     }
@@ -176,6 +253,10 @@ void handle_rx_ctrl(uint8_t* rx_msg) {
     tx_msg[0] = 0; // TODO
     tx_msg[1] = rx_msg[1];
     tx_msg[2] = rx_msg[2];
+    // TODO - send back 32 bits of data instead of 24
+    tx_msg[3] = (tx_data >> 16) & 0xFF;
+    tx_msg[4] = (tx_data >> 8) & 0xFF;
+    tx_msg[5] = tx_data & 0xFF;
 
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
