@@ -18,8 +18,8 @@ queue_t can_tx_msg_queue;
 // system on any PCB without any peripherals
 bool sim_local_actions = false;
 
-void handle_rx_hk(uint8_t* rx_msg);
-void handle_rx_ctrl(uint8_t* rx_msg);
+void handle_rx_hk(uint8_t field_num);
+void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data);
 
 
 // Checks the RX message queue and processes the first message (if it exists)
@@ -34,68 +34,75 @@ void handle_rx_msg(void) {
         dequeue(&can_rx_msg_queue, rx_msg);
     }
 
-    switch (rx_msg[1]) {
+    uint8_t msg_type = rx_msg[2];
+    uint8_t field_num = rx_msg[3];
+    uint32_t rx_data =
+        ((uint32_t) rx_msg[4] << 24) |
+        ((uint32_t) rx_msg[5] << 16) |
+        ((uint32_t) rx_msg[6] << 8) |
+        ((uint32_t) rx_msg[7]);
+
+    switch (msg_type) {
         case CAN_EPS_HK:
-            handle_rx_hk(rx_msg);
+            handle_rx_hk(field_num);
             break;
         case CAN_EPS_CTRL:
-            handle_rx_ctrl(rx_msg);
+            handle_rx_ctrl(field_num, rx_data);
             break;
         default:
             break;
     }
 }
 
-void handle_rx_hk(uint8_t* rx_msg) {
-    uint8_t field_num = rx_msg[2];
-    uint32_t data = 0;
+void handle_rx_hk(uint8_t field_num) {
+    uint32_t tx_data = 0;
 
     // Check field number
     if ((CAN_EPS_HK_BB_VOL <= field_num) &&
             (field_num <= CAN_EPS_HK_BT_VOL)) {
         if (sim_local_actions) {
             // use 11 bits for ADC data
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
             uint8_t channel = field_num - CAN_EPS_HK_BB_VOL;
             fetch_adc_channel(&adc, channel);
-            data = read_adc_channel(&adc, channel);
+            tx_data = read_adc_channel(&adc, channel);
         }
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SP1) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = dac.raw_voltage_a;
+            tx_data = dac.raw_voltage_a;
         }
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SP2) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = dac.raw_voltage_b;
+            tx_data = dac.raw_voltage_b;
         }
     }
 
     else if ((CAN_EPS_HK_GYR_UNCAL_X <= field_num) &&
             (field_num <= CAN_EPS_HK_GYR_UNCAL_Z)) {
         if (sim_local_actions) {
-            data = random() & 0x7FFF;
+            tx_data = random() & 0x7FFF;
         } else {
             uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
             get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, NULL, NULL, NULL);
 
             switch (field_num) {
                 case CAN_EPS_HK_GYR_UNCAL_X:
-                    data = (uint32_t) uncal_x;
+                    tx_data = (uint32_t) uncal_x;
                     break;
                 case CAN_EPS_HK_GYR_UNCAL_Y:
-                    data = (uint32_t) uncal_y;
+                    tx_data = (uint32_t) uncal_y;
                     break;
                 case CAN_EPS_HK_GYR_UNCAL_Z:
-                    data = (uint32_t) uncal_z;
+                    tx_data = (uint32_t) uncal_z;
                     break;
                 default:
                     break;
@@ -106,20 +113,20 @@ void handle_rx_hk(uint8_t* rx_msg) {
     else if ((CAN_EPS_HK_GYR_CAL_X <= field_num) &&
             (field_num <= CAN_EPS_HK_GYR_CAL_Z)) {
         if (sim_local_actions) {
-            data = random() & 0x7FFF;
+            tx_data = random() & 0x7FFF;
         } else {
             uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
             get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
 
             switch (field_num) {
                 case CAN_EPS_HK_GYR_CAL_X:
-                    data = (uint32_t) cal_x;
+                    tx_data = (uint32_t) cal_x;
                     break;
                 case CAN_EPS_HK_GYR_CAL_Y:
-                    data = (uint32_t) cal_y;
+                    tx_data = (uint32_t) cal_y;
                     break;
                 case CAN_EPS_HK_GYR_CAL_Z:
-                    data = (uint32_t) cal_z;
+                    tx_data = (uint32_t) cal_z;
                     break;
                 default:
                     break;
@@ -129,33 +136,33 @@ void handle_rx_hk(uint8_t* rx_msg) {
 
     else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP1) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = heater_1_shadow_setpoint.raw;
+            tx_data = heater_1_shadow_setpoint.raw;
         }
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP2) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = heater_2_shadow_setpoint.raw;
+            tx_data = heater_2_shadow_setpoint.raw;
         }
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SUN_SP1) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = heater_1_sun_setpoint.raw;
+            tx_data = heater_1_sun_setpoint.raw;
         }
     }
 
     else if (field_num == CAN_EPS_HK_HEAT_SUN_SP2) {
         if (sim_local_actions) {
-            data = random() & 0x7FF;
+            tx_data = random() & 0x7FF;
         } else {
-            data = heater_2_sun_setpoint.raw;
+            tx_data = heater_2_sun_setpoint.raw;
         }
     }
 
@@ -167,12 +174,14 @@ void handle_rx_hk(uint8_t* rx_msg) {
     // Message to transmit
     // Send back the message type and field number
     uint8_t tx_msg[8] = {0x00};
-    tx_msg[0] = 0; // TODO
-    tx_msg[1] = rx_msg[1];
-    tx_msg[2] = rx_msg[2];
-    tx_msg[3] = (data >> 16) & 0xFF;
-    tx_msg[4] = (data >> 8) & 0xFF;
-    tx_msg[5] = data & 0xFF;
+    tx_msg[0] = 0x00;
+    tx_msg[1] = 0x00;
+    tx_msg[2] = CAN_EPS_HK;
+    tx_msg[3] = field_num;
+    tx_msg[4] = (tx_data >> 24) & 0xFF;
+    tx_msg[5] = (tx_data >> 16) & 0xFF;
+    tx_msg[6] = (tx_data >> 8) & 0xFF;
+    tx_msg[7] = tx_data & 0xFF;
 
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
@@ -181,13 +190,7 @@ void handle_rx_hk(uint8_t* rx_msg) {
 }
 
 
-void handle_rx_ctrl(uint8_t* rx_msg) {
-    uint8_t field_num = rx_msg[2];
-    // TODO - need 32 bit data
-    uint32_t rx_data =
-        (((uint32_t) rx_msg[3]) << 16) |
-        (((uint32_t) rx_msg[4]) << 8) |
-        ((uint32_t) rx_msg[5]);
+void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     uint32_t tx_data = 0;
 
     // Check field number
@@ -250,13 +253,14 @@ void handle_rx_ctrl(uint8_t* rx_msg) {
     // Message to transmit
     // Send back the message type and field number
     uint8_t tx_msg[8] = {0x00};
-    tx_msg[0] = 0; // TODO
-    tx_msg[1] = rx_msg[1];
-    tx_msg[2] = rx_msg[2];
-    // TODO - send back 32 bits of data instead of 24
-    tx_msg[3] = (tx_data >> 16) & 0xFF;
-    tx_msg[4] = (tx_data >> 8) & 0xFF;
-    tx_msg[5] = tx_data & 0xFF;
+    tx_msg[0] = 0x00;
+    tx_msg[1] = 0x00;
+    tx_msg[2] = CAN_EPS_HK;
+    tx_msg[3] = field_num;
+    tx_msg[4] = (tx_data >> 24) & 0xFF;
+    tx_msg[5] = (tx_data >> 16) & 0xFF;
+    tx_msg[6] = (tx_data >> 8) & 0xFF;
+    tx_msg[7] = tx_data & 0xFF;
 
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
