@@ -26,6 +26,7 @@ typedef struct {
 } uart_cmd_t;
 
 
+void get_status_fn(void);
 void req_eps_hk_fn(void);
 void heater_1_0c_fn(void);
 void heater_1_100c_fn(void);
@@ -34,6 +35,10 @@ void heater_2_100c_fn(void);
 
 // All possible commands
 uart_cmd_t all_cmds[] = {
+    {
+        .description = "Get subsystem status",
+        .fn = get_status_fn
+    },
     {
         .description = "Request EPS HK data",
         .fn = req_eps_hk_fn
@@ -268,6 +273,12 @@ void print_next_rx_msg(void) {
 
 
 
+
+void get_status_fn(void) {
+    print("Restart count: %lu\n", restart_count);
+    print("Restart reason: %lu\n", restart_reason);
+    print("Uptime: %lu s\n", uptime_s);
+}
 
 void req_eps_hk_fn(void) {
     enqueue_rx_msg(CAN_EPS_HK, 0, 0);
