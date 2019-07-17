@@ -255,7 +255,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     uint8_t tx_msg[8] = {0x00};
     tx_msg[0] = 0x00;
     tx_msg[1] = 0x00;
-    tx_msg[2] = CAN_EPS_HK;
+    tx_msg[2] = CAN_EPS_CTRL;
     tx_msg[3] = field_num;
     tx_msg[4] = (tx_data >> 24) & 0xFF;
     tx_msg[5] = (tx_data >> 16) & 0xFF;

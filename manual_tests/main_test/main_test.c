@@ -28,10 +28,11 @@ typedef struct {
 
 void get_status_fn(void);
 void req_eps_hk_fn(void);
-void heater_1_0c_fn(void);
-void heater_1_100c_fn(void);
-void heater_2_0c_fn(void);
-void heater_2_100c_fn(void);
+void heater_1_low_fn(void);
+void heater_1_high_fn(void);
+void heater_2_low_fn(void);
+void heater_2_high_fn(void);
+void reset_fn(void);
 
 // All possible commands
 uart_cmd_t all_cmds[] = {
@@ -44,21 +45,25 @@ uart_cmd_t all_cmds[] = {
         .fn = req_eps_hk_fn
     },
     {
-        .description = "Set heater 1 setpoint = 0C",
-        .fn = heater_1_0c_fn
+        .description = "Set heater 1 setpoint = 0C/-20C",
+        .fn = heater_1_low_fn
     },
     {
-        .description = "Set heater 1 setpoint = 100C",
-        .fn = heater_1_100c_fn
+        .description = "Set heater 1 setpoint = 100C/65C",
+        .fn = heater_1_high_fn
     },
     {
-        .description = "Set heater 2 setpoint = 0C",
-        .fn = heater_2_0c_fn
+        .description = "Set heater 2 setpoint = 0C/-20C",
+        .fn = heater_2_low_fn
     },
     {
-        .description = "Set heater 2 setpoint = 100C",
-        .fn = heater_2_100c_fn
-    }
+        .description = "Set heater 2 setpoint = 100C/65C",
+        .fn = heater_2_high_fn
+    },
+    {
+        .description = "Reset subsystem",
+        .fn = reset_fn
+    },
 };
 // Length of array
 const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
@@ -196,11 +201,17 @@ void process_eps_hk_tx_msg(uint8_t field_num, uint32_t tx_data) {
 
 void process_eps_ctrl_tx_msg(uint8_t field_num) {
     switch (field_num) {
-        case CAN_EPS_CTRL_HEAT_SP1:
-            print("Set heater setpoint 1\n");
+        case CAN_EPS_CTRL_HEAT_SHADOW_SP1:
+            print("Set heater - shadow setpoint 1\n");
             break;
-        case CAN_EPS_CTRL_HEAT_SP2:
-            print("Set heater setpoint 2\n");
+        case CAN_EPS_CTRL_HEAT_SHADOW_SP2:
+            print("Set heater - shadow setpoint 2\n");
+            break;
+        case CAN_EPS_CTRL_HEAT_SUN_SP1:
+            print("Set heater - sun setpoint 1\n");
+            break;
+        case CAN_EPS_CTRL_HEAT_SUN_SP2:
+            print("Set heater - sun setpoint 2\n");
             break;
         default:
             break;
@@ -284,32 +295,37 @@ void req_eps_hk_fn(void) {
     enqueue_rx_msg(CAN_EPS_HK, 0, 0);
 }
 
-void heater_1_0c_fn(void) {
-    double res = therm_temp_to_res(0);
-    double vol = therm_res_to_vol(res);
-    uint16_t raw_data = dac_vol_to_raw_data(vol);
-    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP1, raw_data);
+void heater_1_low_fn(void) {
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SHADOW_SP1,
+        heater_setpoint_to_dac_raw_data(0));
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SUN_SP1,
+        heater_setpoint_to_dac_raw_data(-20));
 }
 
-void heater_1_100c_fn(void) {
-    double res = therm_temp_to_res(100);
-    double vol = therm_res_to_vol(res);
-    uint16_t raw_data = dac_vol_to_raw_data(vol);
-    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP1, raw_data);
+void heater_1_high_fn(void) {
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SHADOW_SP1,
+        heater_setpoint_to_dac_raw_data(100));
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SUN_SP1,
+        heater_setpoint_to_dac_raw_data(65));
 }
 
-void heater_2_0c_fn(void) {
-    double res = therm_temp_to_res(0);
-    double vol = therm_res_to_vol(res);
-    uint16_t raw_data = dac_vol_to_raw_data(vol);
-    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP2, raw_data);
+void heater_2_low_fn(void) {
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SHADOW_SP2,
+        heater_setpoint_to_dac_raw_data(0));
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SUN_SP2,
+        heater_setpoint_to_dac_raw_data(-20));
 }
 
-void heater_2_100c_fn(void) {
-    double res = therm_temp_to_res(100);
-    double vol = therm_res_to_vol(res);
-    uint16_t raw_data = dac_vol_to_raw_data(vol);
-    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SP2, raw_data);
+void heater_2_high_fn(void) {
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SHADOW_SP2,
+        heater_setpoint_to_dac_raw_data(100));
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_HEAT_SUN_SP2,
+        heater_setpoint_to_dac_raw_data(65));
+}
+
+void reset_fn(void) {
+    print("Intentionally resetting...\n");
+    enqueue_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_RESET, 0);
 }
 
 
@@ -354,7 +370,7 @@ int main(void) {
     WDT_ENABLE_SYS_RESET(WDTO_8S);
 
     init_eps();
-    set_uart_baud_rate(UART_BAUD_115200);
+    // set_uart_baud_rate(UART_BAUD_115200);
 
     print("\n\n\nStarting commands test\n\n");
 
