@@ -188,6 +188,22 @@ void process_eps_hk_tx_msg(uint8_t field_num, uint32_t tx_data) {
             print("Gyro (Cal) Z:");
             print_imu_gyro(tx_data);
             break;
+        case CAN_EPS_HK_HEAT_SHADOW_SP1:
+            print("Heater shadow setpoint 1:");
+            print_therm_temp(tx_data);
+            break;
+        case CAN_EPS_HK_HEAT_SHADOW_SP2:
+            print("Heater shadow setpoint 2:");
+            print_therm_temp(tx_data);
+            break;
+        case CAN_EPS_HK_HEAT_SUN_SP1:
+            print("Heater sun setpoint 1:");
+            print_therm_temp(tx_data);
+            break;
+        case CAN_EPS_HK_HEAT_SUN_SP2:
+            print("Heater sun setpoint 2:");
+            print_therm_temp(tx_data);
+            break;
         default:
             return;
     }
