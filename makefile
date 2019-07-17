@@ -7,7 +7,9 @@
 #-------------------------------------------------------------------------------
 # Libraries from lib-common to link
 # For some reason, conversions needs to come after dac or else it gives an error
-LIB = -L./lib-common/lib -ladc -lcan -ldac -lconversions -lheartbeat -lpex -lqueue -lspi -ltimer -luart -lutilities -lwatchdog
+# Need to put dac before conversions, uptime before timer, heartbeat before can,
+# or else gives an error for undefined reference
+LIB = -L./lib-common/lib -ladc -lheartbeat -lcan -ldac -lconversions -lpex -lqueue -lspi -luptime -ltimer -luart -lutilities -lwatchdog
 # Program name
 PROG = eps
 # Name of microcontroller ("32m1" or "64m1")
@@ -29,7 +31,9 @@ DEVICE = m$(MCU)
 BUILD = build
 # Manual tests directory
 MANUAL_TESTS = $(dir $(wildcard manual_tests/*/.))
-
+# Harness testing folder
+TEST = harness_tests
+# HARNESS_ARGS - can specify from the command line when calling `make`
 
 # Detect operating system - based on https://gist.github.com/sighingnow/deee806603ec9274fd47
 
@@ -56,15 +60,19 @@ endif
 ifeq ($(WINDOWS), true)
 	# higher number
 	PORT = $(shell powershell "[System.IO.Ports.SerialPort]::getportnames() | sort | select -First 2 | select -Last 1")
+	# TODO Not sure if this actually works for windows
+ 	UART = $(shell powershell "[System.IO.Ports.SerialPort]::getportnames() | sort | select -First 1")
 endif
 ifeq ($(MAC_OS), true)
 	# lower number
 	PORT = $(shell find /dev -name 'tty.usbmodem[0-9]*' | sort | head -n1)
+	UART = $(shell find /dev -name 'tty.usbmodem[0-9]*' | sort | sed -n 2p)
 endif
 ifeq ($(LINUX), true)
 	# lower number
 	# TODO - test this
 	PORT = $(shell find /dev -name 'ttyS[0-9]*' | sort | head -n1)
+	UART = $(shell find /dev -name 'ttyS[0-9]*' | sort | sed -n 2p)
 endif
 
 # If automatic port detection fails,
@@ -124,6 +132,14 @@ clean:
 # Print debug information
 debug:
 	@echo ------------
+	@echo "MCU:" $(MCU)
+	@echo ------------
+	@echo "DEVICE:" $(DEVICE)
+	@echo ------------
+	@echo "TEST:" $(TEST)
+	@echo ------------
+	@echo "HARNESS_ARGS:" $(HARNESS_ARGS)
+	@echo ------------
 	@echo "WINDOWS:" $(WINDOWS)
 	@echo ------------
 	@echo "MAC_OS:" $(MAC_OS)
@@ -141,7 +157,7 @@ debug:
 # because harness.py has the `include` and `src` paths hardcoded
 harness:
 	cd lib-common && \
-	$(PYTHON) ./bin/harness.py -p $(PORT) -d ../harness_tests
+	$(PYTHON) ./bin/harness.py -p $(PORT) -u $(UART) -d ../$(TEST) $(HARNESS_ARGS)
 
 # Help shows available commands
 help:

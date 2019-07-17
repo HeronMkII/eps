@@ -4,6 +4,7 @@
 #include <can/can.h>
 #include <queue/queue.h>
 #include <spi/spi.h>
+#include <uptime/uptime.h>
 #include <watchdog/watchdog.h>
 
 #include "can_commands.h"
