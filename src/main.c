@@ -6,11 +6,14 @@ int main(void) {
     WDT_ENABLE_SYS_RESET(WDTO_8S);
 
     init_eps();
+    init_hb(HB_EPS);
 
     // Main loop (infinite)
     while (1) {
         // Reset watchdog timer
         WDT_ENABLE_SYS_RESET(WDTO_8S);
+        // Possibly send/receive heartbeat
+        run_hb();
         // Shunt control algorithm
         control_shunts();
         // Send a TX CAN message
