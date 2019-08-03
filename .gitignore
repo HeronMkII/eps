@@ -28,6 +28,7 @@ xcuserdata
 
 # VS Code files
 .vscode
+*.code-workspace
 
 # Compiled Python files
 *.pyc
