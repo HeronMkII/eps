@@ -52,6 +52,8 @@ extern heater_mode_t heater_mode;
 
 
 void init_heaters(void);
+void low_power_timer_func(void);
+void start_low_power_mode(void);
 uint32_t read_eeprom(uint32_t* addr, uint32_t default_val);
 
 void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data);

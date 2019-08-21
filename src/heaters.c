@@ -15,6 +15,7 @@ Shadow is the default setpoint mode, sun is the secondary mode.
 
 #include <adc/adc.h>
 #include <uart/uart.h>
+#include <uptime/uptime.h>
 
 #include "devices.h"
 #include "heaters.h"
@@ -46,8 +47,18 @@ heater_val_t heater_sun_cur_thresh_lower = {
     .eeprom_addr = HEATER_CUR_THRESH_LOWER_ADDR
 };
 
-heater_mode_t heater_mode = HEATER_MODE_SHADOW;
+heater_mode_t heater_mode =  HEATER_MODE_SHADOW;
+uint8_t low_power_countdown = 0;
 
+void low_power_timer_func(void) {
+    if (low_power_countdown > 0) {
+        low_power_countdown -= 1;
+        // Finished waiting
+        if (low_power_countdown == 0) {
+            update_heater_setpoint_outputs();
+        }
+    }
+}
 
 void init_heaters(void) {
     // Read setpoints
@@ -63,7 +74,7 @@ void init_heaters(void) {
     heater_2_sun_setpoint.raw = (uint16_t) read_eeprom(
         heater_2_sun_setpoint.eeprom_addr,
         heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SUN_SETPOINT));
-    
+
     // Don't need to call set_raw_heater_setpoint() to save to EEPROM because
     // when it restarts, it will use the default values again
 
@@ -76,6 +87,7 @@ void init_heaters(void) {
         adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_LOWER));
 
     update_heater_setpoint_outputs();
+    add_uptime_callback(low_power_timer_func);
 }
 
 // TODO - move to lib-common/utilities
@@ -125,6 +137,15 @@ void update_heater_setpoint_outputs(void) {
     }
 }
 
+
+// When called, will set the heaters to low power mode for 30 seconds
+void start_low_power_mode(void) {
+    // Go to low power mode
+    set_dac_raw_voltage(&dac, DAC_A, 0);
+    set_dac_raw_voltage(&dac, DAC_B, 0);
+    // Wait 30 seconds before turning heaters back on
+    low_power_countdown = 30;
+}
 
 //when called, will check if setpoint needs to be changed and then do so if needed
 void control_heater_mode(void) {
