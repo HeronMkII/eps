@@ -96,6 +96,8 @@ https://stemrobotics.cs.pdx.edu/sites/default/files/Gyro.pdf
 https://base.xsens.com/hc/en-us/articles/209611089-Understanding-Sensor-Bias-offset-
 https://stackoverflow.com/questions/14210206/gyroscope-drift-on-mobile-phones
 https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
+
+TODO - activate internal pullup resistor for H_INTN input (PORTx = 1)
 */
 
 #include "imu.h"
