@@ -33,21 +33,26 @@ int main(void) {
 
     init_uptime();
     init_heaters();
-    add_uptime_callback(heaters_countdown);
 
     // Turn heaters on
-    double resistance = therm_temp_to_res(30);
-    double voltage = therm_res_to_vol(resistance);
-    set_dac_raw_voltage(&dac, DAC_A, voltage);
-    set_dac_raw_voltage(&dac, DAC_B, voltage);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint,
+        heater_setpoint_to_dac_raw_data(30));
+    set_raw_heater_setpoint(&heater_2_shadow_setpoint,
+        heater_setpoint_to_dac_raw_data(30));
+    set_raw_heater_setpoint(&heater_1_sun_setpoint,
+        heater_setpoint_to_dac_raw_data(10));
+    set_raw_heater_setpoint(&heater_2_sun_setpoint,
+        heater_setpoint_to_dac_raw_data(10));
+
+    add_uptime_callback(heaters_countdown);
 
     while (1) {
+        print("\nLow power mode off\n");
+        count = 10;
+        _delay_ms(count * 1000);
         print("\nStarting low power mode\n");
         start_low_power_mode();
         count = HEATER_LOW_POWER_TIMER;
-        _delay_ms(count * 1000);
-        print("\nLow power mode off\n");
-        count = 10;
         _delay_ms(count * 1000);
     }
 
