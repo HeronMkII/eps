@@ -26,6 +26,9 @@
 #define HEATER_SUN_CUR_THRESH_UPPER 1.00
 #define HEATER_SUN_CUR_THRESH_LOWER 0.95
 
+// Low power mode
+#define HEATER_LOW_POWER_TIMER 30
+
 
 typedef struct {
     // Raw 12-bit DAC format

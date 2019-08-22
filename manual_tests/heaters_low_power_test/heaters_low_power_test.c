@@ -7,6 +7,7 @@ Test heaters low power mode
 #include <adc/adc.h>
 #include <uart/uart.h>
 #include <uptime/uptime.h>
+#include <conversions/conversions.h>
 
 #include "../../src/devices.h"
 #include "../../src/heaters.h"
@@ -34,14 +35,20 @@ int main(void) {
     init_heaters();
     add_uptime_callback(heaters_countdown);
 
+    // Turn heaters on
+    double resistance = therm_temp_to_res(30);
+    double voltage = therm_res_to_vol(resistance);
+    set_dac_raw_voltage(&dac, DAC_A, voltage);
+    set_dac_raw_voltage(&dac, DAC_B, voltage);
+
     while (1) {
         print("\nStarting low power mode\n");
         start_low_power_mode();
-        count = 30;
-        _delay_ms(30000);
+        count = HEATER_LOW_POWER_TIMER;
+        _delay_ms(count * 1000);
         print("\nLow power mode off\n");
-        count = 5;
-        _delay_ms(5000);
+        count = 10;
+        _delay_ms(count * 1000);
     }
 
     return 0;
