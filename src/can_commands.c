@@ -58,19 +58,19 @@ void handle_rx_hk(uint8_t field_num) {
     uint32_t tx_data = 0;
 
     // Check field number
-    if ((CAN_EPS_HK_BB_VOL <= field_num) &&
-            (field_num <= CAN_EPS_HK_BT_VOL)) {
+    if ((CAN_EPS_HK_BAT_VOL <= field_num) &&
+            (field_num <= CAN_EPS_HK_PAY_CON_TEMP)) {
         if (sim_local_actions) {
             // use 11 bits for ADC data
             tx_data = random() & 0x7FF;
         } else {
-            uint8_t channel = field_num - CAN_EPS_HK_BB_VOL;
+            uint8_t channel = field_num - CAN_EPS_HK_BAT_VOL;
             fetch_adc_channel(&adc, channel);
             tx_data = read_adc_channel(&adc, channel);
         }
     }
 
-    else if (field_num == CAN_EPS_HK_HEAT_SP1) {
+    else if (field_num == CAN_EPS_HK_HEAT1_SP) {
         if (sim_local_actions) {
             tx_data = random() & 0x7FF;
         } else {
@@ -78,7 +78,7 @@ void handle_rx_hk(uint8_t field_num) {
         }
     }
 
-    else if (field_num == CAN_EPS_HK_HEAT_SP2) {
+    else if (field_num == CAN_EPS_HK_HEAT2_SP) {
         if (sim_local_actions) {
             tx_data = random() & 0x7FF;
         } else {
@@ -134,36 +134,14 @@ void handle_rx_hk(uint8_t field_num) {
         }
     }
 
-    else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP1) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = heater_1_shadow_setpoint.raw;
-        }
+    else if (field_num == CAN_EPS_HK_RESTART_COUNT) {
+        tx_data = restart_count;
     }
-
-    else if (field_num == CAN_EPS_HK_HEAT_SHADOW_SP2) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = heater_2_shadow_setpoint.raw;
-        }
+    else if (field_num == CAN_EPS_HK_RESTART_REASON) {
+        tx_data = restart_reason;
     }
-
-    else if (field_num == CAN_EPS_HK_HEAT_SUN_SP1) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = heater_1_sun_setpoint.raw;
-        }
-    }
-
-    else if (field_num == CAN_EPS_HK_HEAT_SUN_SP2) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = heater_2_sun_setpoint.raw;
-        }
+    else if (field_num == CAN_EPS_HK_UPTIME) {
+        tx_data = uptime_s;
     }
 
     // If the message type is not recognized, return before enqueueing
@@ -200,23 +178,23 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
         // Just take care of the condition so we don't return early below
     }
     
-    else if (field_num == CAN_EPS_CTRL_HEAT_SHADOW_SP1) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT1_SHAD_SP) {
         set_raw_heater_setpoint(&heater_1_shadow_setpoint, (uint16_t) rx_data);
     }
-    else if (field_num == CAN_EPS_CTRL_HEAT_SHADOW_SP2) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT2_SHAD_SP) {
         set_raw_heater_setpoint(&heater_2_shadow_setpoint, (uint16_t) rx_data);
     }
-    else if (field_num == CAN_EPS_CTRL_HEAT_SUN_SP1) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT1_SUN_SP) {
         set_raw_heater_setpoint(&heater_1_sun_setpoint, (uint16_t) rx_data);
     }
-    else if (field_num == CAN_EPS_CTRL_HEAT_SUN_SP2) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT2_SUN_SP) {
         set_raw_heater_setpoint(&heater_2_sun_setpoint, (uint16_t) rx_data);
     }
 
-    else if (field_num == CAN_EPS_CTRL_HEAT_CUR_THRESH_LOWER) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER) {
         set_raw_heater_cur_thresh(&heater_sun_cur_thresh_lower, (uint16_t) rx_data);
     }
-    else if (field_num == CAN_EPS_CTRL_HEAT_CUR_THRESH_UPPER) {
+    else if (field_num == CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER) {
         set_raw_heater_cur_thresh(&heater_sun_cur_thresh_upper, (uint16_t) rx_data);
     }
 
@@ -232,16 +210,6 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
         // warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
         uint32_t* ptr = (uint32_t*) ((uint16_t) rx_data);
         tx_data = eeprom_read_dword(ptr);
-    }
-
-    else if (field_num == CAN_EPS_CTRL_RESTART_COUNT) {
-        tx_data = restart_count;
-    }
-    else if (field_num == CAN_EPS_CTRL_RESTART_REASON) {
-        tx_data = restart_reason;
-    }
-    else if (field_num == CAN_EPS_CTRL_UPTIME) {
-        tx_data = uptime_s;
     }
 
     // If the field number is not recognized, return before enqueueing so we
