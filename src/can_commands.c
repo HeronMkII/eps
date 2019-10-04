@@ -160,11 +160,10 @@ void handle_rx_hk(uint8_t field_num) {
     tx_msg[5] = (tx_data >> 16) & 0xFF;
     tx_msg[6] = (tx_data >> 8) & 0xFF;
     tx_msg[7] = tx_data & 0xFF;
-
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
-    // print("Enqueued TX\n");
-    // print_bytes(tx_msg, 8);
+
+    restart_cmd_timer();
 }
 
 
@@ -229,9 +228,8 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     tx_msg[5] = (tx_data >> 16) & 0xFF;
     tx_msg[6] = (tx_data >> 8) & 0xFF;
     tx_msg[7] = tx_data & 0xFF;
-
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
-    // print("Enqueued TX\n");
-    // print_bytes(tx_msg, 8);
+
+    restart_cmd_timer();
 }

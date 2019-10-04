@@ -378,12 +378,14 @@ int main(void) {
     // Change these as necessary for testing
     sim_local_actions = false;
     sim_obc = false;
+    cmd_timer_period_s = 600;
     hb_ping_period_s = 20;
     disable_hb = false;
     print_can_msgs = true;
 
     print("sim_local_actions = %u\n", sim_local_actions);
     print("sim_obc = %u\n", sim_obc);
+    print("cmd_timer_period_s = %lu\n", cmd_timer_period_s);
     print("hb_ping_period_s = %lu\n", hb_ping_period_s);
     print("disable_hb = %u\n", disable_hb);
     print("print_can_msgs = %u\n", print_can_msgs);
