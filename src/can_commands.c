@@ -13,11 +13,6 @@ queue_t can_rx_msg_queue;
 // CAN messages that need to be transmitted (when possible)
 queue_t can_tx_msg_queue;
 
-// Set this to true to simulate performing all local actions (e.g. fetching
-// data, actuating motors) - this allows testing just the PAY command handling
-// system on any PCB without any peripherals
-bool sim_local_actions = false;
-
 void handle_rx_hk(uint8_t field_num);
 void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data);
 
@@ -60,77 +55,56 @@ void handle_rx_hk(uint8_t field_num) {
     // Check field number
     if ((CAN_EPS_HK_BAT_VOL <= field_num) &&
             (field_num <= CAN_EPS_HK_PAY_CON_TEMP)) {
-        if (sim_local_actions) {
-            // use 11 bits for ADC data
-            tx_data = random() & 0x7FF;
-        } else {
-            uint8_t channel = field_num - CAN_EPS_HK_BAT_VOL;
-            fetch_adc_channel(&adc, channel);
-            tx_data = read_adc_channel(&adc, channel);
-        }
+        uint8_t channel = field_num - CAN_EPS_HK_BAT_VOL;
+        fetch_adc_channel(&adc, channel);
+        tx_data = read_adc_channel(&adc, channel);
     }
 
     else if (field_num == CAN_EPS_HK_HEAT1_SP) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = dac.raw_voltage_a;
-        }
+        tx_data = dac.raw_voltage_a;
     }
 
     else if (field_num == CAN_EPS_HK_HEAT2_SP) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FF;
-        } else {
-            tx_data = dac.raw_voltage_b;
-        }
+        tx_data = dac.raw_voltage_b;
     }
 
     else if ((CAN_EPS_HK_GYR_UNCAL_X <= field_num) &&
             (field_num <= CAN_EPS_HK_GYR_UNCAL_Z)) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FFF;
-        } else {
-            uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
-            get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, NULL, NULL, NULL);
+        uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
+        get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, NULL, NULL, NULL);
 
-            switch (field_num) {
-                case CAN_EPS_HK_GYR_UNCAL_X:
-                    tx_data = (uint32_t) uncal_x;
-                    break;
-                case CAN_EPS_HK_GYR_UNCAL_Y:
-                    tx_data = (uint32_t) uncal_y;
-                    break;
-                case CAN_EPS_HK_GYR_UNCAL_Z:
-                    tx_data = (uint32_t) uncal_z;
-                    break;
-                default:
-                    break;
-            }
+        switch (field_num) {
+            case CAN_EPS_HK_GYR_UNCAL_X:
+                tx_data = (uint32_t) uncal_x;
+                break;
+            case CAN_EPS_HK_GYR_UNCAL_Y:
+                tx_data = (uint32_t) uncal_y;
+                break;
+            case CAN_EPS_HK_GYR_UNCAL_Z:
+                tx_data = (uint32_t) uncal_z;
+                break;
+            default:
+                break;
         }
     }
 
     else if ((CAN_EPS_HK_GYR_CAL_X <= field_num) &&
             (field_num <= CAN_EPS_HK_GYR_CAL_Z)) {
-        if (sim_local_actions) {
-            tx_data = random() & 0x7FFF;
-        } else {
-            uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
-            get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
+        uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
+        get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
 
-            switch (field_num) {
-                case CAN_EPS_HK_GYR_CAL_X:
-                    tx_data = (uint32_t) cal_x;
-                    break;
-                case CAN_EPS_HK_GYR_CAL_Y:
-                    tx_data = (uint32_t) cal_y;
-                    break;
-                case CAN_EPS_HK_GYR_CAL_Z:
-                    tx_data = (uint32_t) cal_z;
-                    break;
-                default:
-                    break;
-            }
+        switch (field_num) {
+            case CAN_EPS_HK_GYR_CAL_X:
+                tx_data = (uint32_t) cal_x;
+                break;
+            case CAN_EPS_HK_GYR_CAL_Y:
+                tx_data = (uint32_t) cal_y;
+                break;
+            case CAN_EPS_HK_GYR_CAL_Z:
+                tx_data = (uint32_t) cal_z;
+                break;
+            default:
+                break;
         }
     }
 
