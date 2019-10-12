@@ -184,7 +184,7 @@ void handle_rx_hk(uint8_t field_num) {
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
 
-    restart_cmd_timer();
+    restart_com_timeout();
 }
 
 
@@ -298,5 +298,5 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     // Enqueue TX data to transmit
     enqueue(&can_tx_msg_queue, tx_msg);
 
-    restart_cmd_timer();
+    restart_com_timeout();
 }
