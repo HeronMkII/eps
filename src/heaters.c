@@ -62,16 +62,16 @@ void low_power_timer_func(void) {
 
 void init_heaters(void) {
     // Read setpoints
-    heater_1_shadow_setpoint.raw = (uint16_t) read_eeprom(
+    heater_1_shadow_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_1_shadow_setpoint.eeprom_addr,
         heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SHADOW_SETPOINT));
-    heater_2_shadow_setpoint.raw = (uint16_t) read_eeprom(
+    heater_2_shadow_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_2_shadow_setpoint.eeprom_addr,
         heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SHADOW_SETPOINT));
-    heater_1_sun_setpoint.raw = (uint16_t) read_eeprom(
+    heater_1_sun_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_1_sun_setpoint.eeprom_addr,
         heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SUN_SETPOINT));
-    heater_2_sun_setpoint.raw = (uint16_t) read_eeprom(
+    heater_2_sun_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_2_sun_setpoint.eeprom_addr,
         heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SUN_SETPOINT));
 
@@ -79,10 +79,10 @@ void init_heaters(void) {
     // when it restarts, it will use the default values again
 
     // Read current thresholds
-    heater_sun_cur_thresh_upper.raw = (uint16_t) read_eeprom(
+    heater_sun_cur_thresh_upper.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_upper.eeprom_addr,
         adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_UPPER));
-    heater_sun_cur_thresh_lower.raw = (uint16_t) read_eeprom(
+    heater_sun_cur_thresh_lower.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_lower.eeprom_addr,
         adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_LOWER));
 
@@ -90,22 +90,12 @@ void init_heaters(void) {
     add_uptime_callback(low_power_timer_func);
 }
 
-// TODO - move to lib-common/utilities
-// TODO - new struct eeprom_val_t to abstract reading/writing with default values
-uint32_t read_eeprom(uint32_t* addr, uint32_t default_val) {
-    uint32_t data = eeprom_read_dword(addr);
-    if (data == EEPROM_DEF_DWORD){
-        return default_val;
-    }
-    return data;
-}
-
 // Sets temperature setpoint of heater 1 (connected to DAC A)
 // raw_data - 12 bit DAC raw data for setpoint
 void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data) {
     setpoint->raw = raw_data;
     //save to EEPROM
-    eeprom_write_dword(setpoint->eeprom_addr, setpoint->raw);
+    write_eeprom(setpoint->eeprom_addr, setpoint->raw);
     update_heater_setpoint_outputs();
 }
 
@@ -114,7 +104,7 @@ void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data) {
 void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data) {
     cur_thresh->raw = raw_data;
     //save to EEPROM
-    eeprom_write_dword(cur_thresh->eeprom_addr, cur_thresh->raw);
+    write_eeprom(cur_thresh->eeprom_addr, cur_thresh->raw);
     update_heater_setpoint_outputs();
 }
 

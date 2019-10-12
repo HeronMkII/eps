@@ -5,16 +5,13 @@
 void init_eps(void) {
     // UART
     init_uart();
-
     // SPI
     init_spi();
 
     // ADC
     init_adc(&adc);
-
     // PEX
     init_pex(&pex);
-
     // DAC
     init_dac(&dac);
 
@@ -34,6 +31,7 @@ void init_eps(void) {
     init_tx_mob(&data_tx_mob);
 
     init_uptime();
+    init_com_timeout();
 }
 
 

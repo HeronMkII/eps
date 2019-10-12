@@ -17,8 +17,6 @@
 extern queue_t can_rx_msg_queue;
 extern queue_t can_tx_msg_queue;
 
-extern bool sim_local_actions;
-
 void handle_rx_msg(void);
 
 #endif

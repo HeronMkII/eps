@@ -7,12 +7,12 @@
 #include "devices.h"
 
 //EEPROM address for storing raw data
-#define HEATER_1_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x70)
-#define HEATER_2_SHADOW_SETPOINT_ADDR   ((uint32_t*) 0x74)
-#define HEATER_1_SUN_SETPOINT_ADDR      ((uint32_t*) 0x78)
-#define HEATER_2_SUN_SETPOINT_ADDR      ((uint32_t*) 0x7C)
-#define HEATER_CUR_THRESH_UPPER_ADDR    ((uint32_t*) 0x80)
-#define HEATER_CUR_THRESH_LOWER_ADDR    ((uint32_t*) 0x84)
+#define HEATER_1_SHADOW_SETPOINT_ADDR   0x70
+#define HEATER_2_SHADOW_SETPOINT_ADDR   0x74
+#define HEATER_1_SUN_SETPOINT_ADDR      0x78
+#define HEATER_2_SUN_SETPOINT_ADDR      0x7C
+#define HEATER_CUR_THRESH_UPPER_ADDR    0x80
+#define HEATER_CUR_THRESH_LOWER_ADDR    0x84
 
 #define HEATER_SETPOINT_COUNT 4
 
@@ -33,7 +33,7 @@
 typedef struct {
     // Raw 12-bit DAC format
     uint16_t raw;
-    uint32_t* eeprom_addr;
+    uint16_t eeprom_addr;
 } heater_val_t;
 
 typedef enum {
@@ -57,7 +57,6 @@ extern heater_mode_t heater_mode;
 void init_heaters(void);
 void low_power_timer_func(void);
 void start_low_power_mode(void);
-uint32_t read_eeprom(uint32_t* addr, uint32_t default_val);
 
 void set_raw_heater_setpoint(heater_val_t* setpoint, uint16_t raw_data);
 void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data);
