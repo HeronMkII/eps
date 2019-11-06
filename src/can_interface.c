@@ -33,11 +33,11 @@ void data_tx_callback(uint8_t* data, uint8_t* len) {
 // CAN MOBs
 
 mob_t cmd_rx_mob = {
-	.mob_num = EPS_CMD_MOB_NUM,
-	.mob_type = RX_MOB,
+    .mob_num = EPS_CMD_MOB_NUM,
+    .mob_type = RX_MOB,
     .dlc = 8,
     .id_tag = { EPS_EPS_CMD_MOB_ID },
-	.id_mask = { CAN_RX_MASK_ID },
+    .id_mask = { CAN_RX_MASK_ID },
     .ctrl = default_rx_ctrl,
 
     .rx_cb = cmd_rx_callback
@@ -45,7 +45,7 @@ mob_t cmd_rx_mob = {
 
 mob_t cmd_tx_mob = {
     .mob_num = OBC_CMD_MOB_NUM,
-	.mob_type = TX_MOB,
+    .mob_type = TX_MOB,
     .id_tag = { EPS_OBC_CMD_MOB_ID },
     .ctrl = default_tx_ctrl,
 
