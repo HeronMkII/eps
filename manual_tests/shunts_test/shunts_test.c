@@ -87,7 +87,7 @@ int main(void) {
         uint8_t channel = MEAS_PACK_VOUT;
         fetch_adc_channel(&adc, channel);
         uint16_t raw_data = read_adc_channel(&adc, channel);
-        double batt_voltage = adc_raw_data_to_eps_vol(raw_data);
+        double batt_voltage = adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             print("Battery Voltage: %.6f V\n", batt_voltage);
         }

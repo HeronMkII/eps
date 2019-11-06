@@ -9,8 +9,8 @@
 void read_voltage(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double voltage = adc_raw_data_to_eps_vol(raw_data);
+    double raw_voltage = adc_raw_to_ch_vol(raw_data);
+    double voltage = adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
     print("%s, %u, 0x%04x, %.6f V, %.6f V\n",
             name, channel, raw_data, raw_voltage, voltage);
 }
@@ -18,8 +18,8 @@ void read_voltage(char* name, uint8_t channel) {
 void read_current(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double current = adc_raw_data_to_eps_cur(raw_data);
+    double raw_voltage = adc_raw_to_ch_vol(raw_data);
+    double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     print("%s, %u, 0x%04x, %.6f V, %.6f A\n",
             name, channel, raw_data, raw_voltage, current);
 }
@@ -27,8 +27,8 @@ void read_current(char* name, uint8_t channel) {
 void read_bat_current(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double current = adc_raw_data_to_bat_cur(raw_data);
+    double raw_voltage = adc_raw_to_ch_vol(raw_data);
+    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     print("%s, %u, 0x%04x, %.6f V, %.6f A\n",
             name, channel, raw_data, raw_voltage, current);
 }
@@ -36,8 +36,8 @@ void read_bat_current(char* name, uint8_t channel) {
 void read_therm(char* name, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double raw_voltage = adc_raw_data_to_raw_vol(raw_data);
-    double temp = adc_raw_data_to_therm_temp(raw_data);
+    double raw_voltage = adc_raw_to_ch_vol(raw_data);
+    double temp = adc_raw_to_therm_temp(raw_data);
     print("%s, %u, 0x%04x, %.6f V, %.6f C\n",
             name, channel, raw_data, raw_voltage, temp);
 }

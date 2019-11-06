@@ -81,10 +81,12 @@ void init_heaters(void) {
     // Read current thresholds
     heater_sun_cur_thresh_upper.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_upper.eeprom_addr,
-        adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_UPPER));
+        adc_circ_cur_to_raw(HEATER_SUN_CUR_THRESH_UPPER,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     heater_sun_cur_thresh_lower.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_lower.eeprom_addr,
-        adc_eps_cur_to_raw_data(HEATER_SUN_CUR_THRESH_LOWER));
+        adc_circ_cur_to_raw(HEATER_SUN_CUR_THRESH_LOWER,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 
     update_heater_setpoint_outputs();
     add_uptime_callback(low_power_timer_func);
@@ -111,7 +113,7 @@ void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data) {
 double read_eps_cur(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double current = adc_raw_data_to_eps_cur(raw_data);
+    double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     return current;
 }
 
@@ -145,10 +147,12 @@ void control_heater_mode(void) {
     total_current += read_eps_cur(MEAS_POS_Y_IOUT);
     total_current += read_eps_cur(MEAS_NEG_X_IOUT);
 
-    if (total_current > adc_raw_data_to_eps_cur(heater_sun_cur_thresh_upper.raw)) { //In the sun
+    if (total_current > adc_raw_to_circ_cur(heater_sun_cur_thresh_upper.raw,
+            ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF)) { //In the sun
         heater_mode = HEATER_MODE_SUN;
     }
-    else if (total_current < adc_raw_data_to_eps_cur(heater_sun_cur_thresh_lower.raw)) {
+    else if (total_current < adc_raw_to_circ_cur(heater_sun_cur_thresh_lower.raw,
+            ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF)) {
         heater_mode = HEATER_MODE_SHADOW;
     }
 
