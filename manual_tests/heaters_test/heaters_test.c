@@ -83,7 +83,7 @@ void set_heater_2(double temp) {
 void read_voltage(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double voltage = adc_raw_data_to_eps_vol(raw_data);
+    double voltage = adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
     print(", %.6f", voltage);
 }
 
@@ -96,7 +96,7 @@ void read_current(uint8_t channel) {
 void read_therm(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double temp = adc_raw_data_to_therm_temp(raw_data);
+    double temp = adc_raw_to_therm_temp(raw_data);
     print(", %.6f", temp);
 }
 
@@ -117,12 +117,12 @@ void read_data_fn(void) {
         read_therm(MEAS_THERM_2);
         read_voltage(MEAS_PACK_VOUT);
 
-        // Use a different conversion formula for battery current (bipolar operation)
-        // TODO - change conversion in lib-common
+        // Battery current (bipolar operation)
         uint8_t channel = MEAS_PACK_IOUT;
         fetch_adc_channel(&adc, channel);
         uint16_t raw_data = read_adc_channel(&adc, channel);
-        double current = adc_raw_data_to_eps_cur(raw_data) - 2.5;
+        double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+
         print(", %.6f", current);
 
         read_current(MEAS_BT_IOUT);
@@ -257,8 +257,8 @@ int main(void) {
     init_heaters();
 
     print("\n\n\nStarting test\n\n");
-    print("DAC Raw Voltage A: %.4x = %f c\n", dac.raw_voltage_a, adc_raw_data_to_therm_temp(dac.raw_voltage_a));
-    print("DAC Raw Voltage B: %.4x = %f c\n", dac.raw_voltage_b, adc_raw_data_to_therm_temp(dac.raw_voltage_b));
+    print("DAC Raw Voltage A: %.4x = %f c\n", dac.raw_voltage_a, adc_raw_to_therm_temp(dac.raw_voltage_a));
+    print("DAC Raw Voltage B: %.4x = %f c\n", dac.raw_voltage_b, adc_raw_to_therm_temp(dac.raw_voltage_b));
 
     print("\nAt any time, press h to show the command menu\n");
     print_cmds();

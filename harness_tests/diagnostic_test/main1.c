@@ -22,28 +22,28 @@
 double read_voltage(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double voltage = adc_raw_data_to_eps_vol(raw_data);
+    double voltage = adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
     return voltage;
 }
 
 double read_current(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double current = adc_raw_data_to_eps_cur(raw_data);
+    double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     return current;
 }
 
 double read_bat_current(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double current = adc_raw_data_to_bat_cur(raw_data);
+    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     return current;
 }
 
 double read_therm(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double temp = adc_raw_data_to_therm_temp(raw_data);
+    double temp = adc_raw_to_therm_temp(raw_data);
     return temp;
 }
 

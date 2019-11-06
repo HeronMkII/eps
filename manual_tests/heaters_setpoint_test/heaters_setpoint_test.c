@@ -19,7 +19,7 @@ void read_setpoint(char* str, uint16_t raw_voltage) {
 }
 
 void read_cur_thresh(char* str, uint16_t raw_cur) {
-    print("%s: %.6f A\n", str, adc_raw_data_to_eps_cur(raw_cur));
+    print("%s: %.6f A\n", str, adc_raw_to_circ_cur(raw_cur, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 }
 
 void read_current(char* str, uint8_t channel) {			
@@ -39,7 +39,7 @@ void read_current_sum(char* str) {
 void read_therm(char* str, uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
-    double temp = adc_raw_data_to_therm_temp(raw_data);
+    double temp = adc_raw_to_therm_temp(raw_data);
     print("%s: %.6f C\n", str, temp);
 }
 
@@ -78,9 +78,9 @@ void set_setpoints(float shadow, float sun) {
 
 void set_cur_threshes(float upper, float lower) {
     set_raw_heater_cur_thresh(&heater_sun_cur_thresh_upper,
-        adc_eps_cur_to_raw_data(upper));
+        adc_circ_cur_to_raw(upper, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     set_raw_heater_cur_thresh(&heater_sun_cur_thresh_lower,
-        adc_eps_cur_to_raw_data(lower));
+        adc_circ_cur_to_raw(lower, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 }
 
 void print_cmds(void) {

@@ -88,19 +88,19 @@ void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number, uint32_t raw_data) {
 
 
 void print_voltage(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f V\n", raw_data, adc_raw_data_to_eps_vol(raw_data));
+    print(" 0x%.3X = %.3f V\n", raw_data, adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES));
 }
 
 void print_current(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_eps_cur(raw_data));
+    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 }
 
 void print_bat_current(uint16_t raw_data) {
-    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_data_to_bat_cur(raw_data));
+    print(" 0x%.3X = %.3f A\n", raw_data, adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF));
 }
 
 void print_therm_temp(uint16_t raw_data) {
-    print(" 0x%.3X = %.2f C\n", raw_data, adc_raw_data_to_therm_temp(raw_data));
+    print(" 0x%.3X = %.2f C\n", raw_data, adc_raw_to_therm_temp(raw_data));
 }
 
 void print_imu_gyro(uint16_t raw_data) {

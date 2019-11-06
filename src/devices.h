@@ -10,6 +10,20 @@
 #define ADC_CS_PORT PORTB
 #define ADC_CS_DDR  DDRB
 
+// TODO - correct numbers
+
+// Current sense resistor values (in ohms)
+#define ADC_DEF_CUR_SENSE_RES   0.008
+#define ADC_BAT_CUR_SENSE_RES   0.002
+
+// Voltage references for INA214's (in V)
+#define ADC_DEF_CUR_SENSE_VREF  0.0
+#define ADC_BAT_CUR_SENSE_VREF  2.5
+
+// Voltage divider resistor values (in ohms)
+#define ADC_VOL_SENSE_LOW_RES   1e4
+#define ADC_VOL_SENSE_HIGH_RES  1e4
+
 // DAC CS
 #define DAC_CS_PIN  PB4
 #define DAC_CS_PORT PORTB
