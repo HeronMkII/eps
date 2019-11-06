@@ -12,6 +12,6 @@
 
 // CAN MOBs
 extern mob_t cmd_rx_mob;
-extern mob_t data_tx_mob;
+extern mob_t cmd_tx_mob;
 
 #endif
