@@ -4,14 +4,6 @@
 
 #include "../../src/general.h"
 
-#define EPS_RESTART_COUNT 10
-#define EPS_RESET_REQUEST 7
-#define EPS_RESET_REASON 11
-
-#define OBC_RESTART_COUNT 8
-#define OBC_RESET_REQUEST 5
-#define OBC_RESET_REASON 9
-
 /* Resets the PAY SSM and verifies that the reset counter increments correctly */
 void pay_reset_test(void){
     uint32_t stale_num_restarts = 0x00;
@@ -38,7 +30,7 @@ void obc_reset_test(void){
     run_hb();
     stale_num_restarts = hb_latest_restart_count;
 
-    send_hb_reset(HB_PAY);
+    send_hb_reset(HB_OBC);
 
     _delay_ms(1000);
     hb_send_obc_req = true;
