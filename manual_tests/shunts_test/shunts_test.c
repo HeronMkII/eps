@@ -14,8 +14,6 @@ void print_cmds(void) {
 }
 
 uint8_t uart_cb(const uint8_t* data, uint8_t len) {
-    bool are_shunts_on_saved;
-
     switch (data[0]) {
         case 'h':
             print_cmds();
@@ -29,14 +27,8 @@ uint8_t uart_cb(const uint8_t* data, uint8_t len) {
             print("Turned shunts off\n");
             break;
         case '3':
-            are_shunts_on_saved = are_shunts_on;
             control_shunts();
             print("Ran shunt control algorithm\n");
-            if (are_shunts_on == are_shunts_on_saved) {
-                print("Shunts stayed the same\n");
-            } else {
-                print("Shunts changed\n");
-            }
             break;
         case '4':
             automatic = true;
@@ -70,6 +62,11 @@ int main(void) {
     init_spi();
     print("SPI Initialized\n");
 
+    // Make sure the ADC is initialized for battery voltage measurements
+    init_adc(&adc);
+    // Make sure PEX is initialized for shunt control
+    init_pex(&pex);
+
     init_shunts();
     print("Shunts Initialized\n");
 
@@ -83,27 +80,9 @@ int main(void) {
 
     // Loop forever, the UART callback will interrupt
     while(1) {
-        // Read battery voltage
-        uint8_t channel = MEAS_PACK_VOUT;
-        fetch_adc_channel(&adc, channel);
-        uint16_t raw_data = read_adc_channel(&adc, channel);
-        double batt_voltage = adc_raw_to_circ_vol(raw_data, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            print("Battery Voltage: %.6f V\n", batt_voltage);
-        }
-
         if (automatic) {
-            // Run the shunt algorithm and check if the state changed
-            bool are_shunts_on_saved = are_shunts_on;
+            // Run the shunt algorithm
             control_shunts();
-            if (are_shunts_on != are_shunts_on_saved) {
-                print("Shunts changed\n");
-                if (are_shunts_on) {
-                    print("Shunts ON (charging OFF)\n");
-                } else {
-                    print("Shunts OFF (charging ON)\n");
-                }
-            }
         }
 
         _delay_ms(1000);
