@@ -64,7 +64,7 @@ void control_shunts(void) {
         ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
 
 #ifdef SHUNTS_DEBUG
-    print("Battery Voltage: %.6f V\n", batt_voltage);
+    print("Battery Voltage: %.3f V\n", batt_voltage);
 #endif
 
     // Decide whether to switch the shunts on, off, or stay the same

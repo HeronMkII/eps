@@ -54,11 +54,6 @@ int main(void) {
     init_uart();
     print("\n\nUART initialized\n");
 
-    // Set the IMU CSn (PD0) high (because it doesn't have a pullup resistor)
-    // so it doesn't interfere with the PEX's output on the MISO line
-    init_cs(PD0, &DDRD);
-    set_cs_high(PD0, &PORTD);
-
     init_spi();
     print("SPI Initialized\n");
 
