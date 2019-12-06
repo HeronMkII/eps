@@ -19,7 +19,6 @@ Shadow is the default setpoint mode, sun is the secondary mode.
 
 #include "devices.h"
 #include "heaters.h"
-#include "measurements.h"
 
 heater_val_t heater_1_shadow_setpoint = {
     .raw = 0,
@@ -142,10 +141,10 @@ void start_low_power_mode(void) {
 //when called, will check if setpoint needs to be changed and then do so if needed
 void control_heater_mode(void) {
     double total_current = 0;
-    total_current += read_eps_cur(MEAS_NEG_Y_IOUT);
-    total_current += read_eps_cur(MEAS_POS_X_IOUT);
-    total_current += read_eps_cur(MEAS_POS_Y_IOUT);
-    total_current += read_eps_cur(MEAS_NEG_X_IOUT);
+    total_current += read_eps_cur(ADC_IMON_X_PLUS);
+    total_current += read_eps_cur(ADC_IMON_X_MINUS);
+    total_current += read_eps_cur(ADC_IMON_Y_PLUS);
+    total_current += read_eps_cur(ADC_IMON_Y_MINUS);
 
     if (total_current > adc_raw_to_circ_cur(heater_sun_cur_thresh_upper.raw,
             ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF)) { //In the sun

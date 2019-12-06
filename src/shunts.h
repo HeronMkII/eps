@@ -9,7 +9,6 @@
 #include <uart/uart.h>
 
 #include "devices.h"
-#include "measurements.h"
 
 
 // Shunt pins on PEX GPIOA (all on bank A)

@@ -21,8 +21,12 @@
 #define ADC_BAT_CUR_SENSE_VREF  2.5
 
 // Voltage divider resistor values (in ohms)
-#define ADC_VOL_SENSE_LOW_RES   1e4
-#define ADC_VOL_SENSE_HIGH_RES  1e4
+// Applies to 5V, PACK, 3V3
+#define ADC_VOL_SENSE_LOW_RES   10000
+#define ADC_VOL_SENSE_HIGH_RES  10000
+
+// TODO - PAY current limiter uses the IMON pin from the IC, not our current sense resistor system
+// figure out from the datasheet what the conversion pin
 
 // DAC CS
 #define DAC_CS_PIN  PB4
