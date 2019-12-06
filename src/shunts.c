@@ -57,7 +57,7 @@ void turn_shunts_off(void) {
 
 void control_shunts(void) {
     // Read battery voltage
-    uint8_t channel = MEAS_PACK_VOUT;
+    uint8_t channel = ADC_VMON_PACK;
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double batt_voltage = adc_raw_to_circ_vol(raw_data,
