@@ -108,6 +108,9 @@ TODO - activate internal pullup resistor for H_INTN input (PORTx = 1)
 // Comment out this line to disable debugging print statements (sent/received packets)
 // #define IMU_DEBUG
 
+// More verbose logging
+// #define IMU_VERBOSE
+
 // CLKSEL0
 pin_info_t imu_clksel0 = {
     .ddr = &DDRD,
@@ -248,11 +251,16 @@ uint8_t wait_for_imu_int(void) {
     }
 
     if (timeout == 0) {
-        // print("Failed INT\n");
+#ifdef IMU_DEBUG
+        print("Failed INT\n");
+#endif
         return 0;
     }
 
-    // print("Successful INT: timeout = %u\n", timeout);
+#ifdef IMU_DEBUG
+    print("Successful INT: timeout = %u\n", timeout);
+#endif
+
     return 1;
 }
 
@@ -635,5 +643,7 @@ uint8_t get_imu_uncal_gyro(uint16_t* x, uint16_t* y, uint16_t* z, uint16_t* bias
 
 // INT2 interrupt from INTn pin
 ISR(INT2_vect) {
-    // print("\nINT2: pin = %u (%.2x)\n", get_imu_int(), PINB);
+#ifdef IMU_VERBOSE
+    print("\nINT2: pin = %u (%.2x)\n", get_imu_int(), PINB);
+#endif
 }

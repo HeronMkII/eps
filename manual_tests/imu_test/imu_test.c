@@ -163,20 +163,22 @@ void test_gyro_comp_inf(void) {
     while (1) {
         uint16_t uncal_x = 0, uncal_y = 0, uncal_z = 0;
         uint16_t bias_x = 0, bias_y = 0, bias_z = 0;
-        get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, &bias_x, &bias_y, &bias_z);
+        uint8_t uncal_ret = get_imu_uncal_gyro(&uncal_x, &uncal_y, &uncal_z, &bias_x, &bias_y, &bias_z);
         uint16_t cal_x = 0, cal_y = 0, cal_z = 0;
-        get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
+        uint8_t cal_ret = get_imu_cal_gyro(&cal_x, &cal_y, &cal_z);
 
         print("\n");
-        print("Uncalibrated: x = %+.6f, y = %+.6f, z = %+.6f\n",
+        print("Uncalibrated: ret = %u, x = %+.6f, y = %+.6f, z = %+.6f\n",
+            uncal_ret,
             imu_raw_data_to_gyro(uncal_x),
             imu_raw_data_to_gyro(uncal_y),
             imu_raw_data_to_gyro(uncal_z));
-        print("Calibrated:   x = %+.6f, y = %+.6f, z = %+.6f\n",
+        print("Calibrated:   ret = %u, x = %+.6f, y = %+.6f, z = %+.6f\n",
+            cal_ret,
             imu_raw_data_to_gyro(cal_x),
             imu_raw_data_to_gyro(cal_y),
             imu_raw_data_to_gyro(cal_z));
-        print("Bias:         x = %+.6f, y = %+.6f, z = %+.6f\n",
+        print("Bias:                  x = %+.6f, y = %+.6f, z = %+.6f\n",
             imu_raw_data_to_gyro(bias_x),
             imu_raw_data_to_gyro(bias_y),
             imu_raw_data_to_gyro(bias_z));
