@@ -62,10 +62,14 @@ int main(void) {
     // Make sure PEX is initialized for shunt control
     init_pex(&pex);
 
+    // Can change these thresholds for testing depending on the battery voltage
+    shunts_on_threshold = 3.9;
+    shunts_off_threshold = 3.8;
+
     init_shunts();
     print("Shunts Initialized\n");
 
-    print("-Y = A3, +Y = A2, -X = A1, +X = A0\n");
+    print("On PEX: -Y = A3, +Y = A2, -X = A1, +X = A0\n");
 
     print("\nStarting test\n\n");
     print_cmds();

@@ -18,6 +18,13 @@ TODO - account for weird voltage spikes in +PACK (battery voltage), don't want
 // false - shunts are OFF, battery charging is ON
 bool are_shunts_on = false;
 
+// If the battery output voltage goes above this threshold (in V),
+// the shunts should be turned on (battery charging off)
+double shunts_on_threshold = SHUNTS_ON_DEF_THRESHOLD;
+// If the battery output voltage goes below this threshold (in V),
+// the shunts should be turned off (battery charging on)
+double shunts_off_threshold = SHUNTS_OFF_DEF_THRESHOLD;
+
 // Initializes shunts as output pins
 void init_shunts(void) {
     set_pex_pin_dir(&pex, PEX_A, SHUNTS_POS_X, OUTPUT);
@@ -68,9 +75,9 @@ void control_shunts(void) {
 #endif
 
     // Decide whether to switch the shunts on, off, or stay the same
-    if ((!are_shunts_on) && (batt_voltage > SHUNTS_ON_THRESHOLD)) {
+    if ((!are_shunts_on) && (batt_voltage > shunts_on_threshold)) {
         turn_shunts_on();
-    } else if (are_shunts_on && (batt_voltage < SHUNTS_OFF_THRESHOLD)) {
+    } else if (are_shunts_on && (batt_voltage < shunts_off_threshold)) {
         turn_shunts_off();
     }
 }
