@@ -54,6 +54,11 @@ int main(void) {
     init_uart();
     print("\n\nUART initialized\n");
 
+    // Useful for seeing cause of reset
+    print("MCUSR = 0x%.2x\n", MCUSR);
+    MCUSR = 0;  // Seems like we need to do this to clear bits
+    print("MCUSR = 0x%.2x\n", MCUSR);
+
     init_spi();
     print("SPI Initialized\n");
 
