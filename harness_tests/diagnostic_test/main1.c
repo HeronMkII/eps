@@ -27,6 +27,13 @@ uint8_t construct_rx_msg_hk(uint8_t field_num){
     dequeue(&can_tx_msg_queue, tx_msg);
 }
 
+double measure_heater_current(uint8_t source){
+    construct_rx_msg_hk(source);
+    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
+    return current;
+}
+
 void read_voltage_test(void) {
     /* Battery voltage */
     /* Enqueue rx msg and handle */
@@ -164,51 +171,75 @@ void read_temp_test(void) {
 }
 
 void heater_test(void) {
-    // Turning the heaters on / off and checking their respective current values
+    // Verifies that battery pack current increases by between 0.15A and 0.2A for each heater
+    // and between 0.3A and 0.4A for both heaters by first computing baseline current. Boost
+    // converter current should increase by 0.12-0.16 and 0.24-0.32A as above.
 
     // Initial values
-    construct_rx_msg_hk(MEAS_BT_IOUT);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double bt_init = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    construct_rx_msg_hk(MEAS_PACK_IOUT);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double battery_init = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
+    double heater_off_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
+    double heater_off_curr_boost = measure_heater_current(MEAS_BT_IOUT);
 
-    // Turn heaters on
+    // Turn heater 1 on
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+
+    // Check current due to heater 1 on
+    _delay_ms(1000);
+    double heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
+    double heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+
+    // Assert correct ranges for battery back and boost converter
+    ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
+    ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.2);
+
+    ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.12);
+    ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.16);
+
+    // Turn heater 1 off
+    _delay_ms(1000);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
+
+    // Turn heater 2 on
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
-
-    // Check current
     _delay_ms(1000);
-    construct_rx_msg_hk(MEAS_BT_IOUT);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double bt_on = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    construct_rx_msg_hk(MEAS_PACK_IOUT);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double battery_on = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    // Assert correct ranges
-    ASSERT_FP_GREATER(bt_on, bt_init);
-    ASSERT_FP_LESS(battery_on, battery_init);
 
-    // Turn heaters off
+    // Check current due to heater 2 on
+    _delay_ms(1000);
+    heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
+    heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+
+    // Assert correct ranges
+    ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
+    ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.2);
+
+    ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.12);
+    ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.16);
+
+    // Turn heater 1 on
+    _delay_ms(1000);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+
+    // Check current due to both heaters on
+    _delay_ms(1000);
+    heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
+    heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+
+    // Assert correct ranges
+    ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.3);
+    ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.4);
+
+    ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.24);
+    ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.32);
+
+    // Turn heaters 1 and 2 off
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0);
-
-    _delay_ms(1000);
-    construct_rx_msg_hk(MEAS_BT_IOUT);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double bt_off = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    construct_rx_msg_hk(MEAS_PACK_IOUT);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
-    double battery_off = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    // Should be approximately equal to when the heaters were off
-    ASSERT_FP_LESS(bt_off, bt_on);
-    ASSERT_FP_GREATER(battery_off, battery_on);
 }
 
 void imu_test(void) {
