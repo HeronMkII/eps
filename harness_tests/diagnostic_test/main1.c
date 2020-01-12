@@ -363,13 +363,33 @@ void heater_setpoint_test(void){
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
 }
 
+void uptime_test(void){
+    construct_rx_msg_hk(CAN_EPS_HK_UPTIME);
+    uint16_t tx_data = uptime_s;
+    ASSERT_FP_GREATER(1000); // 1 second
+    ASSERT_FP_LESS(10000); // 10 seconds
+}
+
+void restart_test(void){
+    construct_rx_msg_hk(CAN_EPS_HK_RESTART_COUNT);
+    uint16_t tx_data = restart_count;
+    ASSERT_FP_GREATER(1);
+    ASSERT_FP_LESS(1000);
+
+    construct_rx_msg_hk(CAN_EPS_HK_RESTART_REASON);
+    tx_data = restart_reason;
+    ASSERT_EQ(0x06);
+}
+
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
 test_t t2 = {.name = "read current", .fn = read_current_test};
 test_t t3 = {.name = "read temp", .fn = read_temp_test};
 test_t t4 = {.name = "test heater", .fn = heater_test};
 test_t t5 = {.name = "test imu", .fn = imu_test};
+test_t t6 = {.name = "uptime test", .fn = uptime_test}
+test_t t7 = {.name = "restart test", .fn = restart_test};
 
-test_t* suite[] = {&t1, &t2, &t3, &t4, &t5};
+test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7};
 
 int main() {
     // UART
