@@ -11,17 +11,34 @@
 #include <conversions/conversions.h>
 #include <uart/uart.h>
 #include <test/test.h>
+#include <can/data_protocol.h>
 
 #include "../../src/devices.h"
 #include "../../src/heaters.h"
 #include "../../src/imu.h"
 #include "../../src/measurements.h"
 #include "../../src/shunts.h"
+#include "../../src/can_commands.h"
 
-uint8_t construct_rx_msg_hk(uint8_t field_num){
+uint8_t tx_msg[8] = {0x00};
+
+void construct_rx_msg_hk(uint8_t field_num){
     uint8_t rx_msg[8] = {0x00};
     rx_msg[2] = CAN_EPS_HK;
     rx_msg[3] = field_num;
+    enqueue(&can_rx_msg_queue, rx_msg);
+    handle_rx_msg();
+    dequeue(&can_tx_msg_queue, tx_msg);
+}
+
+void construct_rx_msg_ctrl(uint8_t field_num, uint32_t data){
+    uint8_t rx_msg[8] = {0x00};
+    rx_msg[2] = CAN_EPS_CTRL;
+    rx_msg[3] = field_num;
+    tx_msg[4] = (data >> 24) & 0xFF;
+    tx_msg[5] = (data >> 16) & 0xFF;
+    tx_msg[6] = (data >> 8) & 0xFF;
+    tx_msg[7] = data & 0xFF;
     enqueue(&can_rx_msg_queue, rx_msg);
     handle_rx_msg();
     dequeue(&can_tx_msg_queue, tx_msg);
@@ -58,7 +75,6 @@ void read_voltage_test(void) {
 
     /* 5V Voltage */
     construct_rx_msg_hk(CAN_EPS_HK_5V_VOL);
-     (&can_tx_msg_queue, tx_msg);
     uint16_t raw_data_5v = (tx_msg[4] << 8) & tx_msg[5];
     double voltage_5v = adc_raw_to_circ_vol(raw_data_5v, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
     ASSERT_FP_GREATER(voltage_5v, 4.99);
@@ -164,8 +180,8 @@ void read_temp_test(void) {
 
     /* Payload Connector Temperature */
     construct_rx_msg_hk(CAN_EPS_HK_PAY_CON_TEMP);
-    uint16_t raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
-    double temp = adc_raw_to_therm_temp(raw_data_temp);
+    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
 }
@@ -333,6 +349,18 @@ void imu_test(void) {
         }
     }
     ASSERT_TRUE(not_zero_flag);
+}
+
+void heater_setpoint_test(void){
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_LOWER, 10);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_UPPER, 10.05);
+    control_heater_mode();
+    ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
+
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_LOWER, 0);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_UPPER, 0.05);
+    control_heater_mode();
+    ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
 }
 
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
