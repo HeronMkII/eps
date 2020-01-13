@@ -381,6 +381,34 @@ void restart_test(void){
     ASSERT_EQ(0x06);
 }
 
+void temp_low_power_mode_test(void){
+    // start temporary low-power mode for 30 s
+    start_low_power_mode();
+
+    /* CAN_EPS_HK_BAT_CUR */
+    construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
+    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    /* Assert current is within range */
+    ASSERT_FP_GREATER(current, 0.1);
+    ASSERT_FP_LESS(current, 0.2);
+}
+
+void indefinite_low_power_mode_test(void){
+  // Go to low power mode
+  set_dac_raw_voltage(&dac, DAC_A, 0);
+  set_dac_raw_voltage(&dac, DAC_B, 0);
+
+  /* CAN_EPS_HK_BAT_CUR */
+  construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
+  uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+  double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+  /* Assert current is within range */
+  ASSERT_FP_GREATER(current, 0.1);
+  ASSERT_FP_LESS(current, 0.15);
+
+}
+
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
 test_t t2 = {.name = "read current", .fn = read_current_test};
 test_t t3 = {.name = "read temp", .fn = read_temp_test};
@@ -388,8 +416,10 @@ test_t t4 = {.name = "test heater", .fn = heater_test};
 test_t t5 = {.name = "test imu", .fn = imu_test};
 test_t t6 = {.name = "uptime test", .fn = uptime_test}
 test_t t7 = {.name = "restart test", .fn = restart_test};
+test_t t8 = {.name = "temporary low-power mode test", .fn = temp_low_power_mode_test};
+test_t t9 = {.name = "indefinite low-power mode test", .fn = indefinite_low_power_mode_test};
 
-test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7};
+test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9};
 
 int main() {
     // UART
