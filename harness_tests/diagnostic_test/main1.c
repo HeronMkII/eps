@@ -366,19 +366,19 @@ void heater_setpoint_test(void){
 void uptime_test(void){
     construct_rx_msg_hk(CAN_EPS_HK_UPTIME);
     uint16_t tx_data = uptime_s;
-    ASSERT_FP_GREATER(1000); // 1 second
-    ASSERT_FP_LESS(10000); // 10 seconds
+    ASSERT_FP_GREATER(tx_data, 1000); // 1 second
+    ASSERT_FP_LESS(tx_data, 10000); // 10 seconds
 }
 
 void restart_test(void){
     construct_rx_msg_hk(CAN_EPS_HK_RESTART_COUNT);
     uint16_t tx_data = restart_count;
-    ASSERT_FP_GREATER(1);
-    ASSERT_FP_LESS(1000);
+    ASSERT_FP_GREATER(tx_data, 1);
+    ASSERT_FP_LESS(tx_data, 1000);
 
     construct_rx_msg_hk(CAN_EPS_HK_RESTART_REASON);
     tx_data = restart_reason;
-    ASSERT_EQ(0x06);
+    ASSERT_EQ(tx_data, 0x06);
 }
 
 void temp_low_power_mode_test(void){
@@ -409,17 +409,48 @@ void indefinite_low_power_mode_test(void){
 
 }
 
+/* Returns current from solar panels for shunts test */
+double get_shunts_data(uint8_t current_source){
+    construct_rx_msg_hk(current_source);
+    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    return current;
+}
+
+//TODO: Verify total battery current
+void shunts_test(void){
+    turn_shunts_on();
+
+    double current = get_shunts_data(CAN_EPS_HK_X_POS_CUR);
+    ASSERT_FP_GREATER(current, 0);
+    ASSERT_FP_LESS(current, 0.01);
+
+    current = get_shunts_data(CAN_EPS_HK_X_NEG_CUR);
+    ASSERT_FP_GREATER(current, 0);
+    ASSERT_FP_LESS(current, 0.01);
+
+    current = get_shunts_data(CAN_EPS_HK_Y_POS_CUR);
+    ASSERT_FP_GREATER(current, 0);
+    ASSERT_FP_LESS(current, 0.01);
+
+    current = get_shunts_data(CAN_EPS_HK_Y_NEG_CUR);
+    ASSERT_FP_GREATER(current, 0);
+    ASSERT_FP_LESS(current, 0.01);
+}
+
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
 test_t t2 = {.name = "read current", .fn = read_current_test};
 test_t t3 = {.name = "read temp", .fn = read_temp_test};
-test_t t4 = {.name = "test heater", .fn = heater_test};
-test_t t5 = {.name = "test imu", .fn = imu_test};
-test_t t6 = {.name = "uptime test", .fn = uptime_test}
+test_t t4 = {.name = "heater test", .fn = heater_test};
+test_t t5 = {.name = "imu test", .fn = imu_test};
+test_t t6 = {.name = "uptime test", .fn = uptime_test};
 test_t t7 = {.name = "restart test", .fn = restart_test};
 test_t t8 = {.name = "temporary low-power mode test", .fn = temp_low_power_mode_test};
 test_t t9 = {.name = "indefinite low-power mode test", .fn = indefinite_low_power_mode_test};
+test_t t10 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
+test_t t11 = {.name = "shunts current test", .fn = shunts_test};
 
-test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9};
+test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9, &t10, &t11};
 
 int main() {
     // UART
