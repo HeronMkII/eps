@@ -1,10 +1,8 @@
 /**
- * Diagnostic test to verify hardware functionality for EPS. This consists of:
- *      - taking measurements with devices and making sure they are within
- *          expected range
- *      - turning on a heater shuld increase current from boost and battery
- *      - imu gyro vals should be small numbers
- */
+ * Diagnostic test to verify hardware functionality for EPS.
+ *      - See Bus Architecture Specification (section 5- diagnostic tests) for more information
+ **/
+
 #include <stdbool.h>
 
 #include <adc/adc.h>
@@ -22,6 +20,7 @@
 
 uint8_t tx_msg[8] = {0x00};
 
+/* Helper function for generating and appropriately dequeueing rx_housekeeping message */
 void construct_rx_msg_hk(uint8_t field_num){
     uint8_t rx_msg[8] = {0x00};
     rx_msg[2] = CAN_EPS_HK;
@@ -31,6 +30,7 @@ void construct_rx_msg_hk(uint8_t field_num){
     dequeue(&can_tx_msg_queue, tx_msg);
 }
 
+/* Helper function for generating and appropriately dequeueing rx_ctrl message */
 void construct_rx_msg_ctrl(uint8_t field_num, uint32_t data){
     uint8_t rx_msg[8] = {0x00};
     rx_msg[2] = CAN_EPS_CTRL;
@@ -44,6 +44,7 @@ void construct_rx_msg_ctrl(uint8_t field_num, uint32_t data){
     dequeue(&can_tx_msg_queue, tx_msg);
 }
 
+/* Helper function for measuring heater currents */
 double measure_heater_current(uint8_t source){
     construct_rx_msg_hk(source);
     uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
@@ -51,6 +52,7 @@ double measure_heater_current(uint8_t source){
     return current;
 }
 
+/* Verifies that battery voltages are within valid range */
 void read_voltage_test(void) {
     /* Battery voltage */
     /* Enqueue rx msg and handle */
@@ -81,6 +83,7 @@ void read_voltage_test(void) {
     ASSERT_FP_LESS(voltage_5v, 5.01);
 }
 
+/* Verifies that battery and solar panel currents are within a valid range */
 void read_current_test(void) {
     /* CAN_EPS_HK_BAT_CUR */
     construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
@@ -147,6 +150,7 @@ void read_current_test(void) {
     ASSERT_FP_LESS(current, 0.3);
 }
 
+/* Verifies that all temperatures are within valid range */
 void read_temp_test(void) {
     uint16_t raw_data_temp = 0;
     double temp = 0;
@@ -186,55 +190,54 @@ void read_temp_test(void) {
     ASSERT_FP_LESS(temp, 26.0);
 }
 
+/* Verifies that battery pack current increases by between 0.15A and 0.2A for each heater
+    and between 0.3A and 0.4A for both heaters by first computing baseline current. Boost
+    converter current should increase by 0.12-0.16 and 0.24-0.32A as above. */
 void heater_test(void) {
-    // Verifies that battery pack current increases by between 0.15A and 0.2A for each heater
-    // and between 0.3A and 0.4A for both heaters by first computing baseline current. Boost
-    // converter current should increase by 0.12-0.16 and 0.24-0.32A as above.
-
-    // Initial values
+    /* Initial values */
     double heater_off_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
     double heater_off_curr_boost = measure_heater_current(MEAS_BT_IOUT);
 
-    // Turn heater 1 on
+    /* Turn heater 1 on */
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
 
-    // Check current due to heater 1 on
+    /* Check current due to heater 1 on */
     _delay_ms(1000);
     double heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
     double heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
 
-    // Assert correct ranges for battery back and boost converter
+    /* Assert correct ranges for battery back and boost converter */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
     ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.2);
 
     ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.12);
     ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.16);
 
-    // Turn heater 1 off
+    /* Turn heater 1 off */
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
 
-    // Turn heater 2 on
+    /* Turn heater 2 on */
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
     _delay_ms(1000);
 
-    // Check current due to heater 2 on
+    /* Check current due to heater 2 on */
     _delay_ms(1000);
     heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
     heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
 
-    // Assert correct ranges
+    /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
     ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.2);
 
     ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.12);
     ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.16);
 
-    // Turn heater 1 on
+    /* Turn heater 1 on */
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
@@ -244,20 +247,21 @@ void heater_test(void) {
     heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
     heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
 
-    // Assert correct ranges
+    /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.3);
     ASSERT_FP_LESS(heater_on_curr_pack, heater_off_curr_pack + 0.4);
 
     ASSERT_FP_GREATER(heater_on_curr_boost, heater_off_curr_boost + 0.24);
     ASSERT_FP_LESS(heater_on_curr_boost, heater_off_curr_boost + 0.32);
 
-    // Turn heaters 1 and 2 off
+    /* Turn heaters 1 and 2 off */
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0);
 }
 
+/* Tests calibrated and uncalibrated gyroscope values */
 void imu_test(void) {
     uint16_t raw_data_imu = 0;
     double gyr_data = 0;
@@ -351,18 +355,20 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 }
 
+/* Sets current thresholds and asserts that heater has correct operational mode */
 void heater_setpoint_test(void){
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_LOWER, 10);
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_UPPER, 10.05);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 10);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 10.05);
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
 
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_LOWER, 0);
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_UPPER, 0.05);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 0);
+    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 0.05);
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
 }
 
+/* Asserts that the uptime value sent is within valid range */
 void uptime_test(void){
     construct_rx_msg_hk(CAN_EPS_HK_UPTIME);
     uint16_t tx_data = uptime_s;
@@ -370,6 +376,7 @@ void uptime_test(void){
     ASSERT_FP_LESS(tx_data, 10000); // 10 seconds
 }
 
+/* Asserts that the restart count value sent is within valid range */
 void restart_test(void){
     construct_rx_msg_hk(CAN_EPS_HK_RESTART_COUNT);
     uint16_t tx_data = restart_count;
@@ -381,8 +388,9 @@ void restart_test(void){
     ASSERT_EQ(tx_data, 0x06);
 }
 
+/* Asserts that low power mode current is within valid range */
 void temp_low_power_mode_test(void){
-    // start temporary low-power mode for 30 s
+    /* start temporary low-power mode for 30 s */
     start_low_power_mode();
 
     /* CAN_EPS_HK_BAT_CUR */
@@ -394,6 +402,7 @@ void temp_low_power_mode_test(void){
     ASSERT_FP_LESS(current, 0.2);
 }
 
+/* Asserts that permanent low power mode current is within valid range */
 void indefinite_low_power_mode_test(void){
   // Go to low power mode
   set_dac_raw_voltage(&dac, DAC_A, 0);
@@ -418,6 +427,7 @@ double get_shunts_data(uint8_t current_source){
 }
 
 //TODO: Verify total battery current
+/* Verifies that shunt currents are within valid range */
 void shunts_test(void){
     turn_shunts_on();
 
@@ -452,28 +462,17 @@ test_t t11 = {.name = "shunts current test", .fn = shunts_test};
 
 test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9, &t10, &t11};
 
-int main() {
-    // UART
+int main(void) {
+    /* Various initializations */
     init_uart();
-
-    // SPI
     init_spi();
-
-    // ADC
     init_adc(&adc);
-
-    // PEX
     init_pex(&pex);
-
-    // DAC
     init_dac(&dac);
-
-    // Shunts
     init_shunts();
-
-    // IMU
     init_imu();
 
+    /* Runs all tests in sequential order */
     run_tests(suite, sizeof(suite) / sizeof(suite[0]));
     return 0;
 }
