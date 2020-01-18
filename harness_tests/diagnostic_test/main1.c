@@ -11,42 +11,56 @@
 #include <test/test.h>
 #include <can/data_protocol.h>
 
+#include "../../src/general.h"
+
 #include "../../src/devices.h"
 #include "../../src/heaters.h"
-#include "../../src/imu.h"
 #include "../../src/measurements.h"
-#include "../../src/shunts.h"
-#include "../../src/can_commands.h"
+#include "../../src/imu.h"
+
 
 uint8_t tx_msg[8] = {0x00};
 
-/* Helper function for generating and appropriately dequeueing rx_housekeeping message */
-void construct_rx_msg_hk(uint8_t field_num){
+/* Helper function for generating and appropriately dequeueing
+    rx_housekeeping or rx_ctrl messages */
+uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
+    /* Initialize queue sizes to invalid valid */
+    uint8_t rx_q_size = -1;
+    uint8_t tx_q_size = -1;
     uint8_t rx_msg[8] = {0x00};
-    rx_msg[2] = CAN_EPS_HK;
-    rx_msg[3] = field_num;
-    enqueue(&can_rx_msg_queue, rx_msg);
-    handle_rx_msg();
-    dequeue(&can_tx_msg_queue, tx_msg);
-}
 
-/* Helper function for generating and appropriately dequeueing rx_ctrl message */
-void construct_rx_msg_ctrl(uint8_t field_num, uint32_t data){
-    uint8_t rx_msg[8] = {0x00};
-    rx_msg[2] = CAN_EPS_CTRL;
+    rx_msg[2] = op_code;
     rx_msg[3] = field_num;
-    tx_msg[4] = (data >> 24) & 0xFF;
-    tx_msg[5] = (data >> 16) & 0xFF;
-    tx_msg[6] = (data >> 8) & 0xFF;
-    tx_msg[7] = data & 0xFF;
+    tx_msg[4] = (tx_data >> 24) & 0xFF;
+    tx_msg[5] = (tx_data >> 16) & 0xFF;
+    tx_msg[6] = (tx_data >> 8) & 0xFF;
+    tx_msg[7] = tx_data & 0xFF;
+
     enqueue(&can_rx_msg_queue, rx_msg);
+    rx_q_size = queue_size(&can_rx_msg_queue);
+    tx_q_size = queue_size(&can_tx_msg_queue);
+    ASSERT_EQ(rx_q_size, 1);
+    ASSERT_EQ(tx_q_size, 0);
+
     handle_rx_msg();
+    rx_q_size = queue_size(&can_rx_msg_queue);
+    tx_q_size = queue_size(&can_tx_msg_queue);
+    ASSERT_EQ(rx_q_size, 0);
+    ASSERT_EQ(tx_q_size, 1);
+
     dequeue(&can_tx_msg_queue, tx_msg);
+    rx_q_size = queue_size(&can_rx_msg_queue);
+    tx_q_size = queue_size(&can_tx_msg_queue);
+    ASSERT_EQ(rx_q_size, 0);
+    ASSERT_EQ(tx_q_size, 0);
+
+    /* TODO: Check status bit to see if this is executed correctly */
+    return tx_data;
 }
 
 /* Helper function for measuring heater currents */
 double measure_heater_current(uint8_t source){
-    construct_rx_msg_hk(source);
+    construct_rx_msg(CAN_EPS_HK, source, 0x00);
     uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
     double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     return current;
@@ -56,10 +70,9 @@ double measure_heater_current(uint8_t source){
 void read_voltage_test(void) {
     /* Battery voltage */
     /* Enqueue rx msg and handle */
-    construct_rx_msg_hk(CAN_EPS_HK_BAT_VOL);
+    uint32_t raw_data_bat = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_VOL, 0x00);
 
     /* Convert for assertion */
-    uint16_t raw_data_bat = (tx_msg[4] << 8) & tx_msg[5];
     double bat_voltage = adc_raw_to_circ_vol(raw_data_bat, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
 
     /* Assert that voltage is within range */
@@ -67,8 +80,7 @@ void read_voltage_test(void) {
     ASSERT_FP_LESS(bat_voltage, 4.2);
 
     /* 3V3 Voltage */
-    construct_rx_msg_hk(CAN_EPS_HK_3V3_VOL);
-    uint16_t raw_data_3v3 = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data_3v3 = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_VOL, 0x00);
     double voltage_3v3 = adc_raw_to_circ_vol(raw_data_3v3, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
 
     /* Assert that voltage is within range */
@@ -76,8 +88,7 @@ void read_voltage_test(void) {
     ASSERT_FP_LESS(voltage_3v3, 3.31);
 
     /* 5V Voltage */
-    construct_rx_msg_hk(CAN_EPS_HK_5V_VOL);
-    uint16_t raw_data_5v = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data_5v = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_VOL, 0x00);
     double voltage_5v = adc_raw_to_circ_vol(raw_data_5v, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
     ASSERT_FP_GREATER(voltage_5v, 4.99);
     ASSERT_FP_LESS(voltage_5v, 5.01);
@@ -86,64 +97,56 @@ void read_voltage_test(void) {
 /* Verifies that battery and solar panel currents are within a valid range */
 void read_current_test(void) {
     /* CAN_EPS_HK_BAT_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.2);
     ASSERT_FP_LESS(current, 0.3);
 
     /* CAN_EPS_HK_X_POS_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_X_POS_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_X_POS_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.4);
     ASSERT_FP_LESS(current, 0.5);
 
     /* CAN_EPS_HK_X_NEG_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_X_NEG_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_X_NEG_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.4);
     ASSERT_FP_LESS(current, 0.5);
 
     /* CAN_EPS_HK_Y_POS_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_Y_POS_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_Y_POS_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.4);
     ASSERT_FP_LESS(current, 0.5);
 
     /* CAN_EPS_HK_Y_NEG_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_Y_NEG_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_Y_NEG_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.4);
     ASSERT_FP_LESS(current, 0.5);
 
     /* CAN_EPS_HK_3V3_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_3V3_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.1);
     ASSERT_FP_LESS(current, 0.2);
 
     /* CAN_EPS_HK_5V_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_5V_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.2);
     ASSERT_FP_LESS(current, 0.3);
 
     /* CAN_EPS_HK_PAY_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_PAY_CUR);
-    raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.2);
@@ -155,36 +158,31 @@ void read_temp_test(void) {
     uint16_t raw_data_temp = 0;
     double temp = 0;
     /* Battery 1 Temperature */
-    construct_rx_msg_hk(CAN_EPS_HK_BAT_TEMP1);
-    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_TEMP1, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
 
     /* Battery 2 Temperature */
-    construct_rx_msg_hk(CAN_EPS_HK_BAT_TEMP2);
-    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_TEMP2, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
 
     /* 3v3 Buck-Boost Converter Temperature */
-    construct_rx_msg_hk(CAN_EPS_HK_3V3_TEMP);
-    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
 
     /* 5V Boost Converter Temperature */
-    construct_rx_msg_hk(CAN_EPS_HK_5V_TEMP);
-    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
 
     /* Payload Connector Temperature */
-    construct_rx_msg_hk(CAN_EPS_HK_PAY_CON_TEMP);
-    raw_data_temp = (tx_msg[4] << 8) & tx_msg[5];
+    raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CON_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 24.0);
     ASSERT_FP_LESS(temp, 26.0);
@@ -268,8 +266,7 @@ void imu_test(void) {
     uint8_t not_zero_flag = 0;
 
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_UNCAL_X);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_X, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
@@ -282,12 +279,10 @@ void imu_test(void) {
 
     not_zero_flag = 0;
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_UNCAL_Y);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_Y, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
-        ASSERT_FP_NEQ(gyr_data, 0);
         /* Ensures that at least one measurement is non-zero */
         if (gyr_data != 0){
             not_zero_flag |= 1;
@@ -297,12 +292,10 @@ void imu_test(void) {
 
     not_zero_flag = 0;
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_UNCAL_Z);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_Z, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
-        ASSERT_FP_NEQ(gyr_data, 0);
         /* Ensures that at least one measurement is non-zero */
         if (gyr_data != 0){
             not_zero_flag |= 1;
@@ -313,12 +306,10 @@ void imu_test(void) {
 
     not_zero_flag = 0;
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_CAL_X);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_X, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
-        ASSERT_FP_NEQ(gyr_data, 0);
         /* Ensures that at least one measurement is non-zero */
         if (gyr_data != 0){
             not_zero_flag |= 1;
@@ -327,12 +318,10 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_CAL_Y);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_Y, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
-        ASSERT_FP_NEQ(gyr_data, 0);
         /* Ensures that at least one measurement is non-zero */
         if (gyr_data != 0){
             not_zero_flag |= 1;
@@ -341,12 +330,10 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 
     for (int i=0; i<3; i++){
-        construct_rx_msg_hk(CAN_EPS_HK_GYR_CAL_Z);
-        raw_data_imu = (tx_msg[4] << 8) & tx_msg[5];
+        raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_Z, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
         ASSERT_FP_LESS(gyr_data, 0.1);
-        ASSERT_FP_NEQ(gyr_data, 0);
         /* Ensures that at least one measurement is non-zero */
         if (gyr_data != 0){
             not_zero_flag |= 1;
@@ -357,33 +344,33 @@ void imu_test(void) {
 
 /* Sets current thresholds and asserts that heater has correct operational mode */
 void heater_setpoint_test(void){
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 10);
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 10.05);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 10);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 10.05);
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
 
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 0);
-    construct_rx_msg_ctrl(CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 0.05);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 0);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 0.05);
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
 }
 
 /* Asserts that the uptime value sent is within valid range */
 void uptime_test(void){
-    construct_rx_msg_hk(CAN_EPS_HK_UPTIME);
+    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
     uint16_t tx_data = uptime_s;
-    ASSERT_FP_GREATER(tx_data, 1000); // 1 second
-    ASSERT_FP_LESS(tx_data, 10000); // 10 seconds
+    ASSERT_FP_GREATER(tx_data, 1); /* 1 second */
+    ASSERT_FP_LESS(tx_data, 10); /* 10 seconds */
 }
 
 /* Asserts that the restart count value sent is within valid range */
 void restart_test(void){
-    construct_rx_msg_hk(CAN_EPS_HK_RESTART_COUNT);
+    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_COUNT, 0x00);
     uint16_t tx_data = restart_count;
     ASSERT_FP_GREATER(tx_data, 1);
     ASSERT_FP_LESS(tx_data, 1000);
 
-    construct_rx_msg_hk(CAN_EPS_HK_RESTART_REASON);
+    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_REASON, 0x00);
     tx_data = restart_reason;
     ASSERT_EQ(tx_data, 0x06);
 }
@@ -394,8 +381,7 @@ void temp_low_power_mode_test(void){
     start_low_power_mode();
 
     /* CAN_EPS_HK_BAT_CUR */
-    construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.1);
@@ -409,8 +395,7 @@ void indefinite_low_power_mode_test(void){
   set_dac_raw_voltage(&dac, DAC_B, 0);
 
   /* CAN_EPS_HK_BAT_CUR */
-  construct_rx_msg_hk(CAN_EPS_HK_BAT_CUR);
-  uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+  uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
   double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
   /* Assert current is within range */
   ASSERT_FP_GREATER(current, 0.1);
@@ -420,8 +405,7 @@ void indefinite_low_power_mode_test(void){
 
 /* Returns current from solar panels for shunts test */
 double get_shunts_data(uint8_t current_source){
-    construct_rx_msg_hk(current_source);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, current_source, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     return current;
 }
@@ -463,15 +447,7 @@ test_t t11 = {.name = "shunts current test", .fn = shunts_test};
 test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9, &t10, &t11};
 
 int main(void) {
-    /* Various initializations */
-    init_uart();
-    init_spi();
-    init_adc(&adc);
-    init_pex(&pex);
-    init_dac(&dac);
-    init_shunts();
-    init_imu();
-
+    init_eps();
     /* Runs all tests in sequential order */
     run_tests(suite, sizeof(suite) / sizeof(suite[0]));
     return 0;
