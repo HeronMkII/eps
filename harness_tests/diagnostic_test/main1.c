@@ -193,8 +193,8 @@ void read_temp_test(void) {
     converter current should increase by 0.12-0.16 and 0.24-0.32A as above. */
 void heater_test(void) {
     /* Initial values */
-    double heater_off_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
-    double heater_off_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+    double heater_off_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
+    double heater_off_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
 
     /* Turn heater 1 on */
     _delay_ms(1000);
@@ -203,8 +203,8 @@ void heater_test(void) {
 
     /* Check current due to heater 1 on */
     _delay_ms(1000);
-    double heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
-    double heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+    double heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
+    double heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
 
     /* Assert correct ranges for battery back and boost converter */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
@@ -225,8 +225,8 @@ void heater_test(void) {
 
     /* Check current due to heater 2 on */
     _delay_ms(1000);
-    heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
-    heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+    heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
+    heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
 
     /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
@@ -242,8 +242,8 @@ void heater_test(void) {
 
     // Check current due to both heaters on
     _delay_ms(1000);
-    heater_on_curr_pack = measure_heater_current(MEAS_PACK_IOUT);
-    heater_on_curr_boost = measure_heater_current(MEAS_BT_IOUT);
+    heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
+    heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
 
     /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.3);
