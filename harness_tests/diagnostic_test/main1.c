@@ -15,19 +15,17 @@
 
 #include "../../src/devices.h"
 #include "../../src/heaters.h"
-#include "../../src/measurements.h"
 #include "../../src/imu.h"
 
-
-uint8_t tx_msg[8] = {0x00};
 
 /* Helper function for generating and appropriately dequeueing
     rx_housekeeping or rx_ctrl messages */
 uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
-    /* Initialize queue sizes to invalid valid */
+    /* Initialize queue sizes to invalid values */
     uint8_t rx_q_size = -1;
     uint8_t tx_q_size = -1;
     uint8_t rx_msg[8] = {0x00};
+    uint8_t tx_msg[8] = {0x00};
 
     rx_msg[2] = op_code;
     rx_msg[3] = field_num;
@@ -55,13 +53,13 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
     ASSERT_EQ(tx_q_size, 0);
 
     /* TODO: Check status bit to see if this is executed correctly */
-    return tx_data;
+    uint32_t r_data = (uint32_t)tx_msg[4] << 24 | (uint32_t)tx_msg[5] << 16 | (uint32_t)tx_msg[6] << 8 | (uint32_t)tx_msg[7];
+    return r_data;
 }
 
 /* Helper function for measuring heater currents */
 double measure_heater_current(uint8_t source){
-    construct_rx_msg(CAN_EPS_HK, source, 0x00);
-    uint16_t raw_data = (tx_msg[4] << 8) & tx_msg[5];
+    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, source, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     return current;
 }
@@ -155,7 +153,7 @@ void read_current_test(void) {
 
 /* Verifies that all temperatures are within valid range */
 void read_temp_test(void) {
-    uint16_t raw_data_temp = 0;
+    uint32_t raw_data_temp = 0;
     double temp = 0;
     /* Battery 1 Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_TEMP1, 0x00);
@@ -261,7 +259,7 @@ void heater_test(void) {
 
 /* Tests calibrated and uncalibrated gyroscope values */
 void imu_test(void) {
-    uint16_t raw_data_imu = 0;
+    uint32_t raw_data_imu = 0;
     double gyr_data = 0;
     uint8_t not_zero_flag = 0;
 
@@ -358,21 +356,19 @@ void heater_setpoint_test(void){
 /* Asserts that the uptime value sent is within valid range */
 void uptime_test(void){
     construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
-    uint16_t tx_data = uptime_s;
+    uint32_t tx_data = uptime_s;
     ASSERT_FP_GREATER(tx_data, 1); /* 1 second */
     ASSERT_FP_LESS(tx_data, 10); /* 10 seconds */
 }
 
 /* Asserts that the restart count value sent is within valid range */
 void restart_test(void){
-    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_COUNT, 0x00);
-    uint16_t tx_data = restart_count;
-    ASSERT_FP_GREATER(tx_data, 1);
-    ASSERT_FP_LESS(tx_data, 1000);
+    uint32_t restart_count = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_COUNT, 0x00);
+    ASSERT_FP_GREATER(restart_count, 1);
+    ASSERT_FP_LESS(restart_count, 1000);
 
-    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_REASON, 0x00);
-    tx_data = restart_reason;
-    ASSERT_EQ(tx_data, 0x06);
+    uint32_t restart_reason = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_REASON, 0x00);
+    ASSERT_EQ(restart_reason, 0x06);
 }
 
 /* Asserts that low power mode current is within valid range */
