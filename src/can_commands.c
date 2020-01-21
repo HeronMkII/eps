@@ -271,12 +271,6 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
     else if (field_num == CAN_EPS_CTRL_START_TEMP_LPM) {
     }
 
-    else if (field_num == CAN_EPS_CTRL_ENABLE_INDEF_LPM) {
-    }
-
-    else if (field_num == CAN_EPS_CTRL_DISABLE_INDEF_LPM) {
-    }
-
     // If the field number is not recognized, return before enqueueing so we
     // don't send anything back
     else {
