@@ -73,12 +73,12 @@ const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
 
 
 // Enqueues a message for EPS to receive
-void enqueue_rx_msg(uint8_t msg_type, uint8_t field_number, uint32_t raw_data) {
+void enqueue_rx_msg(uint8_t opcode, uint8_t field_number, uint32_t raw_data) {
     uint8_t rx_msg[8] = { 0x00 };
-    rx_msg[0] = 0x00;
-    rx_msg[1] = 0x00;
-    rx_msg[2] = msg_type;
-    rx_msg[3] = field_number;
+    rx_msg[0] = opcode;
+    rx_msg[1] = field_number;
+    rx_msg[2] = 0x00;
+    rx_msg[3] = 0x00;
     rx_msg[4] = (raw_data >> 24) & 0xFF;
     rx_msg[5] = (raw_data >> 16) & 0xFF;
     rx_msg[6] = (raw_data >> 8) & 0xFF;
@@ -230,15 +230,15 @@ void sim_send_next_tx_msg(void) {
         dequeue(&can_tx_msg_queue, tx_msg);
     }
 
-    uint8_t msg_type = tx_msg[2];
-    uint8_t field_num = tx_msg[3];
+    uint8_t opcode = tx_msg[0];
+    uint8_t field_num = tx_msg[1];
     uint32_t tx_data =
         ((uint32_t) tx_msg[4] << 24) |
         ((uint32_t) tx_msg[5] << 16) |
         ((uint32_t) tx_msg[6] << 8) |
         ((uint32_t) tx_msg[7]);
 
-    switch (msg_type) {
+    switch (opcode) {
         case CAN_EPS_HK:
             process_eps_hk_tx_msg(field_num, tx_data);
             break;

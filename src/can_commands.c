@@ -13,8 +13,9 @@ queue_t can_rx_msg_queue;
 // CAN messages that need to be transmitted (when possible)
 queue_t can_tx_msg_queue;
 
-void handle_rx_hk(uint8_t field_num);
-void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data);
+void handle_rx_hk(uint8_t field_num, uint8_t* tx_status, uint32_t* tx_data);
+void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
+        uint32_t* tx_data);
 
 
 // Checks the RX message queue and processes the first message (if it exists)
@@ -29,29 +30,47 @@ void handle_rx_msg(void) {
         dequeue(&can_rx_msg_queue, rx_msg);
     }
 
-    uint8_t opcode = rx_msg[2];
-    uint8_t field_num = rx_msg[3];
+    uint8_t opcode = rx_msg[0];
+    uint8_t field_num = rx_msg[1];
     uint32_t rx_data =
         ((uint32_t) rx_msg[4] << 24) |
         ((uint32_t) rx_msg[5] << 16) |
         ((uint32_t) rx_msg[6] << 8) |
         ((uint32_t) rx_msg[7]);
+    
+    uint8_t tx_status = CAN_STATUS_OK;
+    uint32_t tx_data = 0;
 
     switch (opcode) {
         case CAN_EPS_HK:
-            handle_rx_hk(field_num);
+            handle_rx_hk(field_num, &tx_status, &tx_data);
             break;
         case CAN_EPS_CTRL:
-            handle_rx_ctrl(field_num, rx_data);
+            handle_rx_ctrl(field_num, rx_data, &tx_status, &tx_data);
             break;
         default:
+            tx_status = CAN_STATUS_INVALID_OPCODE;
             break;
     }
+
+    // Message to transmit
+    // Send back the message type and field number
+    uint8_t tx_msg[8] = {0x00};
+    tx_msg[0] = opcode;
+    tx_msg[1] = field_num;
+    tx_msg[2] = tx_status;
+    tx_msg[3] = 0x00;
+    tx_msg[4] = (tx_data >> 24) & 0xFF;
+    tx_msg[5] = (tx_data >> 16) & 0xFF;
+    tx_msg[6] = (tx_data >> 8) & 0xFF;
+    tx_msg[7] = tx_data & 0xFF;
+    // Enqueue TX data to transmit
+    enqueue(&can_tx_msg_queue, tx_msg);
+
+    restart_com_timeout();
 }
 
-void handle_rx_hk(uint8_t field_num) {
-    uint32_t tx_data = 0;
-
+void handle_rx_hk(uint8_t field_num, uint8_t* tx_status, uint32_t* tx_data) {
     // TODO - field implementations
 
     // Check field number
@@ -110,90 +129,71 @@ void handle_rx_hk(uint8_t field_num) {
     }
 
     else if (field_num == CAN_EPS_HK_HEAT1_SP) {
-        tx_data = dac.raw_voltage_a;
+        *tx_data = dac.raw_voltage_a;
     }
 
     else if (field_num == CAN_EPS_HK_HEAT2_SP) {
-        tx_data = dac.raw_voltage_b;
+        *tx_data = dac.raw_voltage_b;
     }    
 
     else if (field_num == CAN_EPS_HK_GYR_UNCAL_X) {
         uint16_t uncal_x = 0;
         get_imu_uncal_gyro(&uncal_x, NULL, NULL, NULL, NULL, NULL);
-        tx_data = (uint32_t) uncal_x;
+        *tx_data = (uint32_t) uncal_x;
     }
 
     else if (field_num == CAN_EPS_HK_GYR_UNCAL_Y) {
         uint16_t uncal_y = 0;
         get_imu_uncal_gyro(NULL, &uncal_y, NULL, NULL, NULL, NULL);
-        tx_data = (uint32_t) uncal_y;
+        *tx_data = (uint32_t) uncal_y;
     }
 
     else if (field_num == CAN_EPS_HK_GYR_UNCAL_Z) {
         uint16_t uncal_z = 0;
         get_imu_uncal_gyro(NULL, NULL, &uncal_z, NULL, NULL, NULL);
-        tx_data = (uint32_t) uncal_z;
+        *tx_data = (uint32_t) uncal_z;
     }
 
     else if (field_num == CAN_EPS_HK_GYR_CAL_X) {
         uint16_t cal_x = 0;
         get_imu_cal_gyro(&cal_x, NULL, NULL);
-        tx_data = (uint32_t) cal_x;
+        *tx_data = (uint32_t) cal_x;
     }
 
     else if (field_num == CAN_EPS_HK_GYR_CAL_Y) {
         uint16_t cal_y = 0;
         get_imu_cal_gyro(NULL, &cal_y, NULL);
-        tx_data = (uint32_t) cal_y;
+        *tx_data = (uint32_t) cal_y;
     }
 
     else if (field_num == CAN_EPS_HK_GYR_CAL_Z) {
         uint16_t cal_z = 0;
         get_imu_cal_gyro(NULL, NULL, &cal_z);
-        tx_data = (uint32_t) cal_z;
+        *tx_data = (uint32_t) cal_z;
     }
 
     else if (field_num == CAN_EPS_HK_UPTIME) {
-        tx_data = uptime_s;
+        *tx_data = uptime_s;
     }
 
     else if (field_num == CAN_EPS_HK_RESTART_COUNT) {
-        tx_data = restart_count;
+        *tx_data = restart_count;
     }
 
     else if (field_num == CAN_EPS_HK_RESTART_REASON) {
-        tx_data = restart_reason;
+        *tx_data = restart_reason;
     }
 
     // If the message type is not recognized, return before enqueueing
     else {
-        return;
+        *tx_status = CAN_STATUS_INVALID_FIELD_NUM;
     }
-
-    // Message to transmit
-    // Send back the message type and field number
-    uint8_t tx_msg[8] = {0x00};
-    tx_msg[0] = 0x00;
-    tx_msg[1] = 0x00;
-    tx_msg[2] = CAN_EPS_HK;
-    tx_msg[3] = field_num;
-    tx_msg[4] = (tx_data >> 24) & 0xFF;
-    tx_msg[5] = (tx_data >> 16) & 0xFF;
-    tx_msg[6] = (tx_data >> 8) & 0xFF;
-    tx_msg[7] = tx_data & 0xFF;
-    // Enqueue TX data to transmit
-    enqueue(&can_tx_msg_queue, tx_msg);
-
-    restart_com_timeout();
 }
 
 
-void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
-    uint32_t tx_data = 0;
-
+void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
+        uint32_t* tx_data) {
     // TODO - field implementations
-
-    // Check field number
 
     if (field_num == CAN_EPS_CTRL_PING) {
         // Don't need to do anything
@@ -249,7 +249,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     }
 
     else if (field_num == CAN_EPS_CTRL_READ_EEPROM) {
-        tx_data = read_eeprom((uint16_t) rx_data);
+        *tx_data = read_eeprom((uint16_t) rx_data);
     }
 
     else if (field_num == CAN_EPS_CTRL_ERASE_EEPROM) {
@@ -265,7 +265,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
         // Must first cast to uint16_t or else we get warning: cast to pointer
         // from integer of different size -Wint-to-pointer-cast]
         volatile uint8_t* pointer = (volatile uint8_t*) ((uint16_t) rx_data);
-        tx_data = (uint32_t) (*pointer);
+        *tx_data = (uint32_t) (*pointer);
     }
 
     else if (field_num == CAN_EPS_CTRL_START_TEMP_LPM) {
@@ -280,22 +280,6 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data) {
     // If the field number is not recognized, return before enqueueing so we
     // don't send anything back
     else {
-        return;
+        *tx_status = CAN_STATUS_INVALID_FIELD_NUM;
     }
-
-    // Message to transmit
-    // Send back the message type and field number
-    uint8_t tx_msg[8] = {0x00};
-    tx_msg[0] = 0x00;
-    tx_msg[1] = 0x00;
-    tx_msg[2] = CAN_EPS_CTRL;
-    tx_msg[3] = field_num;
-    tx_msg[4] = (tx_data >> 24) & 0xFF;
-    tx_msg[5] = (tx_data >> 16) & 0xFF;
-    tx_msg[6] = (tx_data >> 8) & 0xFF;
-    tx_msg[7] = tx_data & 0xFF;
-    // Enqueue TX data to transmit
-    enqueue(&can_tx_msg_queue, tx_msg);
-
-    restart_com_timeout();
 }
