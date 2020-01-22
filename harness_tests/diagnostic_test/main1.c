@@ -27,8 +27,8 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
     uint8_t rx_msg[8] = {0x00};
     uint8_t tx_msg[8] = {0x00};
 
-    rx_msg[2] = op_code;
-    rx_msg[3] = field_num;
+    rx_msg[0] = op_code;
+    rx_msg[1] = field_num;
     tx_msg[4] = (tx_data >> 24) & 0xFF;
     tx_msg[5] = (tx_data >> 16) & 0xFF;
     tx_msg[6] = (tx_data >> 8) & 0xFF;
@@ -51,8 +51,8 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
     tx_q_size = queue_size(&can_tx_msg_queue);
     ASSERT_EQ(rx_q_size, 0);
     ASSERT_EQ(tx_q_size, 0);
-
-    /* TODO: Check status bit to see if this is executed correctly */
+    ASSERT_EQ(tx_msg[2], 0);
+    
     uint32_t r_data = (uint32_t)tx_msg[4] << 24 | (uint32_t)tx_msg[5] << 16 | (uint32_t)tx_msg[6] << 8 | (uint32_t)tx_msg[7];
     return r_data;
 }
