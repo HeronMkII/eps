@@ -75,54 +75,68 @@ void handle_rx_hk(uint8_t field_num, uint8_t* tx_status, uint32_t* tx_data) {
 
     // Check field number
     if (field_num == CAN_EPS_HK_BAT_VOL) {
-        // uint8_t channel = field_num - CAN_EPS_HK_BAT_VOL;
-        // fetch_adc_channel(&adc, channel);
-        // tx_data = read_adc_channel(&adc, channel);
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_VMON_PACK);
     }
 
     else if (field_num == CAN_EPS_HK_BAT_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_PACK);
     }
 
     else if (field_num == CAN_EPS_HK_X_POS_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_X_PLUS);
     }
 
     else if (field_num == CAN_EPS_HK_X_NEG_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_X_MINUS);
     }
 
     else if (field_num == CAN_EPS_HK_Y_POS_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_Y_PLUS);
     }
 
     else if (field_num == CAN_EPS_HK_Y_NEG_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_Y_MINUS);
     }
 
     else if (field_num == CAN_EPS_HK_3V3_VOL) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_VMON_3V3);
     }
 
     else if (field_num == CAN_EPS_HK_3V3_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_3V3);
     }
 
     else if (field_num == CAN_EPS_HK_5V_VOL) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_VMON_5V);
     }
 
     else if (field_num == CAN_EPS_HK_5V_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_5V);
     }
 
+    // TODO implement conversion
     else if (field_num == CAN_EPS_HK_PAY_CUR) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_IMON_PAY_LIM);
     }
 
     else if (field_num == CAN_EPS_HK_BAT_TEMP1) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_THM_BATT1);
     }
 
     else if (field_num == CAN_EPS_HK_BAT_TEMP2) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_THM_BATT2);
     }
 
     else if (field_num == CAN_EPS_HK_3V3_TEMP) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_THM_3V3_TOP);
     }
 
     else if (field_num == CAN_EPS_HK_5V_TEMP) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_THM_5V_TOP);
     }
 
     else if (field_num == CAN_EPS_HK_PAY_CON_TEMP) {
+        *tx_data = fetch_and_read_adc_channel(&adc, ADC_THM_PAY_CONN);
     }
 
     else if (field_num == CAN_EPS_HK_SHUNTS) {
@@ -197,10 +211,11 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
 
     if (field_num == CAN_EPS_CTRL_PING) {
         // Don't need to do anything
-        // Just take care of the condition so we don't return early below
+        // Just take care of the condition
     }
     
     else if (field_num == CAN_EPS_CTRL_GET_HEAT1_SHAD_SP) {
+        *tx_data = heater_1_shadow_setpoint.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT1_SHAD_SP) {
@@ -208,6 +223,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
     }
 
     else if (field_num == CAN_EPS_CTRL_GET_HEAT2_SHAD_SP) {
+        *tx_data = heater_2_shadow_setpoint.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT2_SHAD_SP) {
@@ -215,6 +231,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
     }
 
     else if (field_num == CAN_EPS_CTRL_GET_HEAT1_SUN_SP) {
+        *tx_data = heater_1_sun_setpoint.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT1_SUN_SP) {
@@ -222,14 +239,15 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
     }
 
     else if (field_num == CAN_EPS_CTRL_GET_HEAT2_SUN_SP) {
+        *tx_data = heater_2_sun_setpoint.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT2_SUN_SP) {
         set_raw_heater_setpoint(&heater_2_sun_setpoint, (uint16_t) rx_data);
     }
 
-    // TODO - rename current constants in lib-common
     else if (field_num == CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_LOWER) {
+        *tx_data = heater_sun_cur_thresh_lower.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER) {
@@ -237,6 +255,7 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
     }
 
     else if (field_num == CAN_EPS_CTRL_GET_HEAT_CUR_THRESH_UPPER) {
+        *tx_data = heater_sun_cur_thresh_upper.raw;
     }
 
     else if (field_num == CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER) {
@@ -266,9 +285,6 @@ void handle_rx_ctrl(uint8_t field_num, uint32_t rx_data, uint8_t* tx_status,
         // from integer of different size -Wint-to-pointer-cast]
         volatile uint8_t* pointer = (volatile uint8_t*) ((uint16_t) rx_data);
         *tx_data = (uint32_t) (*pointer);
-    }
-
-    else if (field_num == CAN_EPS_CTRL_START_TEMP_LPM) {
     }
 
     // If the field number is not recognized, return before enqueueing so we

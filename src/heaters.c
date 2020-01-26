@@ -46,18 +46,8 @@ heater_val_t heater_sun_cur_thresh_lower = {
     .eeprom_addr = HEATER_CUR_THRESH_LOWER_ADDR
 };
 
-heater_mode_t heater_mode =  HEATER_MODE_SHADOW;
-uint8_t low_power_countdown = 0;
+heater_mode_t heater_mode = HEATER_MODE_SHADOW;
 
-void low_power_timer_func(void) {
-    if (low_power_countdown > 0) {
-        low_power_countdown -= 1;
-        // Finished waiting
-        if (low_power_countdown == 0) {
-            update_heater_setpoint_outputs();
-        }
-    }
-}
 
 void init_heaters(void) {
     // Read setpoints
@@ -88,7 +78,6 @@ void init_heaters(void) {
         ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 
     update_heater_setpoint_outputs();
-    add_uptime_callback(low_power_timer_func);
 }
 
 // Sets temperature setpoint of heater 1 (connected to DAC A)
@@ -109,7 +98,7 @@ void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data) {
     update_heater_setpoint_outputs();
 }
 
-double read_eps_cur(uint8_t channel) {
+double read_solar_cur(uint8_t channel) {
     fetch_adc_channel(&adc, channel);
     uint16_t raw_data = read_adc_channel(&adc, channel);
     double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
@@ -129,30 +118,31 @@ void update_heater_setpoint_outputs(void) {
 }
 
 
-// When called, will set the heaters to low power mode for 30 seconds
-void start_low_power_mode(void) {
-    // Go to low power mode
-    set_dac_raw_voltage(&dac, DAC_A, 0);
-    set_dac_raw_voltage(&dac, DAC_B, 0);
-    // Wait 30 seconds before turning heaters back on
-    low_power_countdown = HEATER_LOW_POWER_TIMER ;
-}
-
 //when called, will check if setpoint needs to be changed and then do so if needed
 void control_heater_mode(void) {
     double total_current = 0;
-    total_current += read_eps_cur(ADC_IMON_X_PLUS);
-    total_current += read_eps_cur(ADC_IMON_X_MINUS);
-    total_current += read_eps_cur(ADC_IMON_Y_PLUS);
-    total_current += read_eps_cur(ADC_IMON_Y_MINUS);
+    total_current += read_solar_cur(ADC_IMON_X_PLUS);
+    total_current += read_solar_cur(ADC_IMON_X_MINUS);
+    total_current += read_solar_cur(ADC_IMON_Y_PLUS);
+    total_current += read_solar_cur(ADC_IMON_Y_MINUS);
 
-    if (total_current > adc_raw_to_circ_cur(heater_sun_cur_thresh_upper.raw,
-            ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF)) { //In the sun
+    double upper_thresh = adc_raw_to_circ_cur(heater_sun_cur_thresh_upper.raw,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
+    double lower_thresh = adc_raw_to_circ_cur(heater_sun_cur_thresh_lower.raw,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
+    
+    // TODO - might need to enable print float flags in main makefile
+    print("Solar current: %.6f A\n", total_current);
+    print("Upper threshold: %.6f A\n", upper_thresh);
+    print("Lower threshold: %.6f A\n", lower_thresh);
+
+    if (total_current > upper_thresh) { //In the sun
         heater_mode = HEATER_MODE_SUN;
+        print("In sun mode\n");
     }
-    else if (total_current < adc_raw_to_circ_cur(heater_sun_cur_thresh_lower.raw,
-            ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF)) {
+    else if (total_current < lower_thresh) {
         heater_mode = HEATER_MODE_SHADOW;
+        print("In shadow mode\n");
     }
 
     update_heater_setpoint_outputs();

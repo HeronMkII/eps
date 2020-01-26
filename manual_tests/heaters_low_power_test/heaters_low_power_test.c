@@ -51,7 +51,6 @@ int main(void) {
         count = 10;
         _delay_ms(count * 1000);
         print("\nStarting low power mode\n");
-        start_low_power_mode();
         count = HEATER_LOW_POWER_TIMER;
         _delay_ms(count * 1000);
     }

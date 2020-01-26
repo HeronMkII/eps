@@ -17,14 +17,16 @@ void cmd_rx_callback(const uint8_t* data, uint8_t len) {
 // MOB 5
 // DATA TX - transmitting data
 void data_tx_callback(uint8_t* data, uint8_t* len) {
-    if (queue_empty(&can_tx_msg_queue)) {
-        *len = 0;
-        return;
-    }
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        if (queue_empty(&can_tx_msg_queue)) {
+            *len = 0;
+            return;
+        }
 
-    // If there is a message in the TX queue, transmit it
-    dequeue(&can_tx_msg_queue, data);
-    *len = 8;
+        // If there is a message in the TX queue, transmit it
+        dequeue(&can_tx_msg_queue, data);
+        *len = 8;
+    }
 }
 
 
