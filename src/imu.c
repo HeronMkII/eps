@@ -93,8 +93,6 @@ https://stemrobotics.cs.pdx.edu/sites/default/files/Gyro.pdf
 https://base.xsens.com/hc/en-us/articles/209611089-Understanding-Sensor-Bias-offset-
 https://stackoverflow.com/questions/14210206/gyroscope-drift-on-mobile-phones
 https://en.wikipedia.org/wiki/Inertial_navigation_system#Error
-
-TODO - activate internal pullup resistor for H_INTN input (PORTx = 1)
 */
 
 #include "imu.h"
@@ -214,6 +212,12 @@ void init_imu_pins(void) {
     EIMSK |= _BV(INT2);
     // enable global interrupts
     sei();
+
+#ifdef IMU_DEBUG
+    print("DDRB: 0x%.2x\n", DDRB);
+    print("PORTB: 0x%.2x\n", PORTB);
+    print("PINB: 0x%.2x\n", PINB);
+#endif
 }
 
 void reset_imu(void) {

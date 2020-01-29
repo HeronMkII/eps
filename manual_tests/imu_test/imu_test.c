@@ -205,6 +205,7 @@ int main(void) {
 
     // Use faster UART to interfere less with timing
     // This is necessary for the IMU to work!!
+    print("Changing baud rate to 115,200!\n");
     set_uart_baud_rate(UART_BAUD_115200);
 
     print("\n\n");
