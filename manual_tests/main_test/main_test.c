@@ -378,7 +378,7 @@ int main(void) {
     // Change these as necessary for testing
     sim_obc = false;
     com_timeout_period_s = 600;
-    hb_req_period_s = 20;
+    hb_req_period_s = 300;
     hb_resp_wait_time_s = 5;
     disable_hb = false;
     print_can_msgs = true;
