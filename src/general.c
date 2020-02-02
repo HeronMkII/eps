@@ -15,6 +15,8 @@ void init_eps(void) {
     // DAC
     init_dac(&dac);
 
+    init_heaters();
+
     // Shunts
     init_shunts();
 

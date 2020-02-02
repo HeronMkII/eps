@@ -17,6 +17,8 @@ int main(void) {
         WDT_ENABLE_SYS_RESET(WDTO_8S);
         // Possibly send/receive heartbeat
         run_hb();
+        // Heater control
+        control_heater_mode();
         // Shunt control algorithm
         control_shunts();
         // Send a TX CAN message
