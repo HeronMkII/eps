@@ -8,6 +8,9 @@ int main(void) {
     init_eps();
     init_hb(HB_EPS);
 
+    print("\n\n");
+    print("EPS main init\n");
+
     // Main loop (infinite)
     while (1) {
         // Reset watchdog timer

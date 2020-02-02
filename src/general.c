@@ -33,27 +33,3 @@ void init_eps(void) {
     init_uptime();
     init_com_timeout();
 }
-
-
-// If there is an RX messsage in the queue, handle it
-void process_next_rx_msg(void) {
-    if (!queue_empty(&can_rx_msg_queue)) {
-        handle_rx_msg();
-    }
-}
-
-/*
-If there is a TX message in the queue, send it
-
-When resume_mob(mob name) is called, it:
-1) resumes the MOB
-2) triggers an interrupt (callback function) to get the data to transmit
-3) sends the data
-4) pauses the mob
-*/
-// Checks the TX message queue and sends the first message (if it exists)
-void send_next_tx_msg(void) {
-    if (!queue_empty(&can_tx_msg_queue)) {
-        resume_mob(&cmd_tx_mob);
-    }
-}
