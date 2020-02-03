@@ -14,9 +14,8 @@
 #define HEATER_CUR_THRESH_UPPER_ADDR    0x80
 #define HEATER_CUR_THRESH_LOWER_ADDR    0x84
 
-#define HEATER_SETPOINT_COUNT 4
-
 // Default setpoints
+// TODO - set and unit test default values
 #define HEATER_1_DEF_SHADOW_SETPOINT   20   //Celsius
 #define HEATER_2_DEF_SHADOW_SETPOINT   20   //Celsius
 #define HEATER_1_DEF_SUN_SETPOINT      5    //Celsius
@@ -26,8 +25,7 @@
 #define HEATER_SUN_CUR_THRESH_UPPER 1.00
 #define HEATER_SUN_CUR_THRESH_LOWER 0.95
 
-// Low power mode
-#define HEATER_LOW_POWER_TIMER 30
+#define HEATER_CTRL_PERIOD_S 60
 
 
 typedef struct {
@@ -62,5 +60,6 @@ void set_raw_heater_cur_thresh(heater_val_t* cur_thresh, uint16_t raw_data);
 double read_eps_cur(uint8_t channel);
 void update_heater_setpoint_outputs(void);
 void control_heater_mode(void);
+void run_heaters(void);
 
 #endif

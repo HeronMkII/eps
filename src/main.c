@@ -11,6 +11,9 @@ int main(void) {
     print("\n\n");
     print("EPS main init\n");
 
+    // Run once at beginning
+    control_heater_mode();
+
     // Main loop (infinite)
     while (1) {
         // Reset watchdog timer
@@ -18,7 +21,7 @@ int main(void) {
         // Possibly send/receive heartbeat
         run_hb();
         // Heater control
-        control_heater_mode();
+        run_heaters();
         // Shunt control algorithm
         control_shunts();
         // Send a TX CAN message
