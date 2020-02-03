@@ -10,7 +10,6 @@
 
 #include "can_commands.h"
 #include "can_interface.h"
-#include "shunts.h"
 
 void init_eps(void);
 

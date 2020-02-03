@@ -22,8 +22,6 @@ int main(void) {
         run_hb();
         // Heater control
         run_heaters();
-        // Shunt control algorithm
-        control_shunts();
         // Send a TX CAN message
         send_next_tx_msg();
         // Process an RX CAN message
