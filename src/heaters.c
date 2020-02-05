@@ -48,6 +48,10 @@ heater_val_t heater_sun_cur_thresh_lower = {
 
 heater_mode_t heater_mode = HEATER_MODE_SHADOW;
 
+uint32_t heater_ctrl_period_s = HEATER_CTRL_PERIOD_S;
+uint32_t heater_ctrl_last_exec_time = 0;
+
+
 
 void init_heaters(void) {
     // Read setpoints
@@ -131,19 +135,33 @@ void control_heater_mode(void) {
     double lower_thresh = adc_raw_to_circ_cur(heater_sun_cur_thresh_lower.raw,
         ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     
-    // TODO - might need to enable print float flags in main makefile
     print("Solar current: %.6f A\n", total_current);
     print("Upper threshold: %.6f A\n", upper_thresh);
     print("Lower threshold: %.6f A\n", lower_thresh);
 
     if (total_current > upper_thresh) { //In the sun
         heater_mode = HEATER_MODE_SUN;
-        print("In sun mode\n");
+        print("Heaters - sun mode\n");
     }
     else if (total_current < lower_thresh) {
         heater_mode = HEATER_MODE_SHADOW;
-        print("In shadow mode\n");
+        print("Heaters - shadow mode\n");
     }
 
     update_heater_setpoint_outputs();
+
+    print("Heater setpoint 1: 0x%x (%.3f C)\n",
+        dac.raw_voltage_a, dac_raw_data_to_heater_setpoint(dac.raw_voltage_a));
+    print("Heater setpoint 2: 0x%x (%.3f C)\n",
+        dac.raw_voltage_b, dac_raw_data_to_heater_setpoint(dac.raw_voltage_b));
+}
+
+void run_heaters(void) {
+    // currently update every 1 minute
+    if ((uptime_s - heater_ctrl_last_exec_time) < heater_ctrl_period_s){
+        return;
+    }
+
+    heater_ctrl_last_exec_time = uptime_s;
+    control_heater_mode(); 
 }

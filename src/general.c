@@ -17,9 +17,6 @@ void init_eps(void) {
 
     init_heaters();
 
-    // Shunts
-    init_shunts();
-
     // IMU
     init_imu();
 

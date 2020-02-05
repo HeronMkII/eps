@@ -85,9 +85,6 @@ Hardware Configuration:
 - The PS1 port is permanently tied to VCC (1).
 - The PS0/WAKE port is tied to a GPIO pin.
 
-TODO - sensor calibration
-
-TODO - calibrate gyroscope CAN/trans command?
 Gyro/angular velocity measurements (#0 p.31)
 Gyroscope drift:
 https://www.analog.com/en/analog-dialogue/raqs/raq-issue-139.html

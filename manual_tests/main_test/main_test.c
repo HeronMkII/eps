@@ -13,8 +13,6 @@ RX and TX are defined from EPS's perspective.
 // Set to true to simulate OBC's CAN messages
 bool sim_obc = false;
 bool disable_hb = false;
-// Set to true to print EPS's TX and RX CAN messages
-bool print_can_msgs = false;
 
 
 // Callback function signature to run a command
@@ -249,42 +247,6 @@ void sim_send_next_tx_msg(void) {
     }
 }
 
-void print_next_tx_msg(void) {
-    if (!print_can_msgs) {
-        return;
-    }
-
-    uint8_t tx_msg[8] = { 0x00 };
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        if (queue_empty(&can_tx_msg_queue)) {
-            return;
-        }
-        peek_queue(&can_tx_msg_queue, tx_msg);
-    }
-
-    print("CAN TX: ");
-    print_bytes(tx_msg, 8);
-}
-
-void print_next_rx_msg(void) {
-    if (!print_can_msgs) {
-        return;
-    }
-
-    uint8_t rx_msg[8] = { 0x00 };
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        if (queue_empty(&can_rx_msg_queue)) {
-            return;
-        }
-        peek_queue(&can_rx_msg_queue, rx_msg);
-    }
-
-    print("CAN RX: ");
-    print_bytes(rx_msg, 8);
-}
-
-
-
 
 void get_status_fn(void) {
     print("Restart count: %lu\n", restart_count);
@@ -381,14 +343,12 @@ int main(void) {
     hb_req_period_s = 300;
     hb_resp_wait_time_s = 5;
     disable_hb = false;
-    print_can_msgs = true;
 
     print("sim_obc = %u\n", sim_obc);
     print("com_timeout_period_s = %lu\n", com_timeout_period_s);
     print("hb_req_period_s = %lu\n", hb_req_period_s);
     print("hb_resp_wait_time_s = %lu\n", hb_resp_wait_time_s);
     print("disable_hb = %u\n", disable_hb);
-    print("print_can_msgs = %u\n", print_can_msgs);
 
     // Initialize heartbeat separately so we have the option to disable it for debugging
     if (!disable_hb) {
@@ -406,33 +366,15 @@ int main(void) {
             run_hb();
         }
 
-        // Run the shunt algorithm and check if the state changed
-        bool are_shunts_on_saved = are_shunts_on;
-        control_shunts();
-        if (are_shunts_on != are_shunts_on_saved) {
-            print("Shunts changed\n");
-            if (are_shunts_on) {
-                print("Shunts ON (charging OFF)\n");
-            } else {
-                print("Shunts OFF (charging ON)\n");
-            }
-        }
-
         // CAN TX
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            print_next_tx_msg();
-            if (sim_obc) {
-                sim_send_next_tx_msg();
-            } else {
-                send_next_tx_msg();
-            }
+        if (sim_obc) {
+            sim_send_next_tx_msg();
+        } else {
+            send_next_tx_msg();
         }
 
         // CAN RX
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            print_next_rx_msg();
-            process_next_rx_msg();
-        }
+        process_next_rx_msg();
     }
 
     return 0;
