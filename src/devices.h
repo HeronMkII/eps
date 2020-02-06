@@ -10,8 +10,6 @@
 #define ADC_CS_PORT PORTB
 #define ADC_CS_DDR  DDRB
 
-// TODO - correct numbers
-
 // Current sense resistor values (in ohms)
 #define ADC_DEF_CUR_SENSE_RES   0.008
 #define ADC_BAT_CUR_SENSE_RES   0.002
@@ -25,8 +23,8 @@
 #define ADC_VOL_SENSE_LOW_RES   10000
 #define ADC_VOL_SENSE_HIGH_RES  10000
 
-// TODO - PAY current limiter uses the IMON pin from the IC, not our current sense resistor system
-// figure out from the datasheet what the conversion pin
+// PAY current measurement uses the IMON pin from the current limiter IC, not a
+// current sense resistor
 
 // DAC CS
 #define DAC_CS_PIN  PB4
