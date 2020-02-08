@@ -40,13 +40,16 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
     ASSERT_EQ(rx_q_size, 1);
     ASSERT_EQ(tx_q_size, 0);
 
-    handle_rx_msg();
+    process_next_rx_msg();
     rx_q_size = queue_size(&can_rx_msg_queue);
     tx_q_size = queue_size(&can_tx_msg_queue);
     ASSERT_EQ(rx_q_size, 0);
     ASSERT_EQ(tx_q_size, 1);
 
     dequeue(&can_tx_msg_queue, tx_msg);
+    print("CAN TX: ");
+    print_bytes(tx_msg, 8);
+
     rx_q_size = queue_size(&can_rx_msg_queue);
     tx_q_size = queue_size(&can_tx_msg_queue);
     ASSERT_EQ(rx_q_size, 0);
@@ -82,14 +85,14 @@ void read_voltage_test(void) {
     double voltage_3v3 = adc_raw_to_circ_vol(raw_data_3v3, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
 
     /* Assert that voltage is within range */
-    ASSERT_FP_GREATER(voltage_3v3, 3.29);
-    ASSERT_FP_LESS(voltage_3v3, 3.31);
+    ASSERT_FP_GREATER(voltage_3v3, 3.25);
+    ASSERT_FP_LESS(voltage_3v3, 3.35);
 
     /* 5V Voltage */
     uint32_t raw_data_5v = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_VOL, 0x00);
     double voltage_5v = adc_raw_to_circ_vol(raw_data_5v, ADC_VOL_SENSE_LOW_RES, ADC_VOL_SENSE_HIGH_RES);
-    ASSERT_FP_GREATER(voltage_5v, 4.99);
-    ASSERT_FP_LESS(voltage_5v, 5.01);
+    ASSERT_FP_GREATER(voltage_5v, 4.95);
+    ASSERT_FP_LESS(voltage_5v, 5.05);
 }
 
 /* Verifies that battery and solar panel currents are within a valid range */
@@ -98,50 +101,50 @@ void read_current_test(void) {
     uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.2);
-    ASSERT_FP_LESS(current, 0.3);
+    ASSERT_FP_GREATER(current, 0.1);
+    ASSERT_FP_LESS(current, 0.2);
 
     /* CAN_EPS_HK_X_POS_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_X_POS_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.4);
-    ASSERT_FP_LESS(current, 0.5);
+    ASSERT_FP_GREATER(current, 0.0);
+    ASSERT_FP_LESS(current, 0.05);
 
     /* CAN_EPS_HK_X_NEG_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_X_NEG_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.4);
-    ASSERT_FP_LESS(current, 0.5);
+    ASSERT_FP_GREATER(current, 0.0);
+    ASSERT_FP_LESS(current, 0.05);
 
     /* CAN_EPS_HK_Y_POS_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_Y_POS_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.4);
-    ASSERT_FP_LESS(current, 0.5);
+    ASSERT_FP_GREATER(current, 0.0);
+    ASSERT_FP_LESS(current, 0.05);
 
     /* CAN_EPS_HK_Y_NEG_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_Y_NEG_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.4);
-    ASSERT_FP_LESS(current, 0.5);
+    ASSERT_FP_GREATER(current, 0.0);
+    ASSERT_FP_LESS(current, 0.05);
 
     /* CAN_EPS_HK_3V3_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.1);
-    ASSERT_FP_LESS(current, 0.2);
+    ASSERT_FP_GREATER(current, 0.10);
+    ASSERT_FP_LESS(current, 0.15);
 
     /* CAN_EPS_HK_5V_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.2);
-    ASSERT_FP_LESS(current, 0.3);
+    ASSERT_FP_GREATER(current, 0.025);
+    ASSERT_FP_LESS(current, 0.1);
 
     /* CAN_EPS_HK_PAY_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CUR, 0x00);
@@ -155,54 +158,73 @@ void read_current_test(void) {
 void read_temp_test(void) {
     uint32_t raw_data_temp = 0;
     double temp = 0;
+
     /* Battery 1 Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_TEMP1, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
-    ASSERT_FP_GREATER(temp, 24.0);
-    ASSERT_FP_LESS(temp, 26.0);
+    ASSERT_FP_GREATER(temp, 20.0);
+    ASSERT_FP_LESS(temp, 30.0);
 
     /* Battery 2 Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_TEMP2, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
-    ASSERT_FP_GREATER(temp, 24.0);
-    ASSERT_FP_LESS(temp, 26.0);
+    ASSERT_FP_GREATER(temp, 20.0);
+    ASSERT_FP_LESS(temp, 30.0);
 
     /* 3v3 Buck-Boost Converter Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
-    ASSERT_FP_GREATER(temp, 24.0);
-    ASSERT_FP_LESS(temp, 26.0);
+    ASSERT_FP_GREATER(temp, 20.0);
+    ASSERT_FP_LESS(temp, 30.0);
 
     /* 5V Boost Converter Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
-    ASSERT_FP_GREATER(temp, 24.0);
-    ASSERT_FP_LESS(temp, 26.0);
+    ASSERT_FP_GREATER(temp, 20.0);
+    ASSERT_FP_LESS(temp, 30.0);
 
     /* Payload Connector Temperature */
     raw_data_temp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CON_TEMP, 0x00);
     temp = adc_raw_to_therm_temp(raw_data_temp);
-    ASSERT_FP_GREATER(temp, 24.0);
-    ASSERT_FP_LESS(temp, 26.0);
+    ASSERT_FP_GREATER(temp, 20.0);
+    ASSERT_FP_LESS(temp, 30.0);
 }
 
 /* Verifies that battery pack current increases by between 0.15A and 0.2A for each heater
     and between 0.3A and 0.4A for both heaters by first computing baseline current. Boost
     converter current should increase by 0.12-0.16 and 0.24-0.32A as above. */
 void heater_test(void) {
+    /* Turn heaters off */
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
+    control_heater_mode();
+
     /* Initial values */
-    double heater_off_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
-    double heater_off_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
+    uint32_t raw_data = 0;
+    
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
+    double heater_off_curr_pack = adc_raw_to_circ_cur(raw_data,
+        ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
+    double heater_off_curr_boost = adc_raw_to_circ_cur(raw_data,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
 
     /* Turn heater 1 on */
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+    control_heater_mode();
 
     /* Check current due to heater 1 on */
     _delay_ms(1000);
-    double heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
-    double heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
+    double heater_on_curr_pack = adc_raw_to_circ_cur(raw_data,
+        ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
+    double heater_on_curr_boost = adc_raw_to_circ_cur(raw_data,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
 
     /* Assert correct ranges for battery back and boost converter */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
@@ -215,16 +237,23 @@ void heater_test(void) {
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
+    control_heater_mode();
+    _delay_ms(1000);
 
     /* Turn heater 2 on */
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
-    _delay_ms(1000);
+    control_heater_mode();
 
     /* Check current due to heater 2 on */
     _delay_ms(1000);
-    heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
-    heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
+
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
+    heater_on_curr_pack = adc_raw_to_circ_cur(raw_data,
+        ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
+    heater_on_curr_boost = adc_raw_to_circ_cur(raw_data,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
 
     /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.15);
@@ -237,11 +266,17 @@ void heater_test(void) {
     _delay_ms(1000);
     set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+    control_heater_mode();
 
     // Check current due to both heaters on
     _delay_ms(1000);
-    heater_on_curr_pack = measure_heater_current(CAN_EPS_HK_BAT_CUR);
-    heater_on_curr_boost = measure_heater_current(CAN_EPS_HK_5V_CUR);
+
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
+    heater_on_curr_pack = adc_raw_to_circ_cur(raw_data,
+        ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
+    raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
+    heater_on_curr_boost = adc_raw_to_circ_cur(raw_data,
+        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
 
     /* Assert correct ranges */
     ASSERT_FP_GREATER(heater_on_curr_pack, heater_off_curr_pack + 0.3);
@@ -255,6 +290,7 @@ void heater_test(void) {
     set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0);
     set_raw_heater_setpoint(&heater_2_sun_setpoint, 0);
+    control_heater_mode();
 }
 
 /* Tests calibrated and uncalibrated gyroscope values */
@@ -342,13 +378,15 @@ void imu_test(void) {
 
 /* Sets current thresholds and asserts that heater has correct operational mode */
 void heater_setpoint_test(void){
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 10);
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 10.05);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
+        adc_circ_cur_to_raw(2, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
+        adc_circ_cur_to_raw(2.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
 
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_LOWER, 0);
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THRESH_UPPER, 0.05);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER, 0);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER, 0.05);
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
 }
@@ -358,7 +396,7 @@ void uptime_test(void){
     construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
     uint32_t tx_data = uptime_s;
     ASSERT_FP_GREATER(tx_data, 1); /* 1 second */
-    ASSERT_FP_LESS(tx_data, 10); /* 10 seconds */
+    ASSERT_FP_LESS(tx_data, 60); /* 60 seconds */
 }
 
 /* Asserts that the restart count value sent is within valid range */
@@ -371,61 +409,11 @@ void restart_test(void){
     ASSERT_EQ(restart_reason, 0x06);
 }
 
-/* Asserts that low power mode current is within valid range */
-void temp_low_power_mode_test(void){
-    /* start temporary low-power mode for 30 s */
-    start_low_power_mode();
-
-    /* CAN_EPS_HK_BAT_CUR */
-    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
-    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
-    /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.1);
-    ASSERT_FP_LESS(current, 0.2);
-}
-
-/* Asserts that permanent low power mode current is within valid range */
-void indefinite_low_power_mode_test(void){
-  // Go to low power mode
-  set_dac_raw_voltage(&dac, DAC_A, 0);
-  set_dac_raw_voltage(&dac, DAC_B, 0);
-
-  /* CAN_EPS_HK_BAT_CUR */
-  uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
-  double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
-  /* Assert current is within range */
-  ASSERT_FP_GREATER(current, 0.1);
-  ASSERT_FP_LESS(current, 0.15);
-
-}
-
 /* Returns current from solar panels for shunts test */
 double get_shunts_data(uint8_t current_source){
     uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, current_source, 0x00);
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     return current;
-}
-
-//TODO: Verify total battery current
-/* Verifies that shunt currents are within valid range */
-void shunts_test(void){
-    turn_shunts_on();
-
-    double current = get_shunts_data(CAN_EPS_HK_X_POS_CUR);
-    ASSERT_FP_GREATER(current, 0);
-    ASSERT_FP_LESS(current, 0.01);
-
-    current = get_shunts_data(CAN_EPS_HK_X_NEG_CUR);
-    ASSERT_FP_GREATER(current, 0);
-    ASSERT_FP_LESS(current, 0.01);
-
-    current = get_shunts_data(CAN_EPS_HK_Y_POS_CUR);
-    ASSERT_FP_GREATER(current, 0);
-    ASSERT_FP_LESS(current, 0.01);
-
-    current = get_shunts_data(CAN_EPS_HK_Y_NEG_CUR);
-    ASSERT_FP_GREATER(current, 0);
-    ASSERT_FP_LESS(current, 0.01);
 }
 
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
@@ -435,12 +423,9 @@ test_t t4 = {.name = "heater test", .fn = heater_test};
 test_t t5 = {.name = "imu test", .fn = imu_test};
 test_t t6 = {.name = "uptime test", .fn = uptime_test};
 test_t t7 = {.name = "restart test", .fn = restart_test};
-test_t t8 = {.name = "temporary low-power mode test", .fn = temp_low_power_mode_test};
-test_t t9 = {.name = "indefinite low-power mode test", .fn = indefinite_low_power_mode_test};
-test_t t10 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
-test_t t11 = {.name = "shunts current test", .fn = shunts_test};
+test_t t8 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
 
-test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8, &t9, &t10, &t11};
+test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8};
 
 int main(void) {
     init_eps();
