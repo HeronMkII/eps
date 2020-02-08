@@ -14,16 +14,16 @@
 #define HEATER_CUR_THRESH_UPPER_ADDR    0x80
 #define HEATER_CUR_THRESH_LOWER_ADDR    0x84
 
-// Default setpoints
-// TODO - set and unit test default values
-#define HEATER_1_DEF_SHADOW_SETPOINT   20   //Celsius
-#define HEATER_2_DEF_SHADOW_SETPOINT   20   //Celsius
-#define HEATER_1_DEF_SUN_SETPOINT      5    //Celsius
-#define HEATER_2_DEF_SUN_SETPOINT      5    //Celsius
+// Default setpoints (raw 12-bit DAC values)
+#define HEATER_1_DEF_SHADOW_SETPOINT    0x400   // 25 C
+#define HEATER_2_DEF_SHADOW_SETPOINT    0x400   // 25 C
+#define HEATER_1_DEF_SUN_SETPOINT       0x39F   // 20 C
+#define HEATER_2_DEF_SUN_SETPOINT       0x39F   // 20 C
 
-// In amps
-#define HEATER_SUN_CUR_THRESH_UPPER 1.00
-#define HEATER_SUN_CUR_THRESH_LOWER 0.95
+// Default current thresholds (raw 12-bit ADC values)
+// TODO
+#define HEATER_SUN_CUR_THRESH_UPPER     0x0C4   // 0.3 A
+#define HEATER_SUN_CUR_THRESH_LOWER     0x041   // 0.1 A
 
 #define HEATER_CTRL_PERIOD_S 60
 
