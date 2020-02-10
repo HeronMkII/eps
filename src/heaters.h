@@ -17,13 +17,12 @@
 // Default setpoints (raw 12-bit DAC values)
 #define HEATER_1_DEF_SHADOW_SETPOINT    0x400   // 25 C
 #define HEATER_2_DEF_SHADOW_SETPOINT    0x400   // 25 C
-#define HEATER_1_DEF_SUN_SETPOINT       0x39F   // 20 C
-#define HEATER_2_DEF_SUN_SETPOINT       0x39F   // 20 C
+#define HEATER_1_DEF_SUN_SETPOINT       0x39D   // 20 C
+#define HEATER_2_DEF_SUN_SETPOINT       0x39D   // 20 C
 
 // Default current thresholds (raw 12-bit ADC values)
-// TODO change to 1A
-#define HEATER_SUN_CUR_THRESH_UPPER     0x0C4   // 0.3 A
-#define HEATER_SUN_CUR_THRESH_LOWER     0x041   // 0.1 A
+#define HEATER_SUN_CUR_THRESH_UPPER     0x28F   // 1 A
+#define HEATER_SUN_CUR_THRESH_LOWER     0x26E   // 0.95 A
 
 #define HEATER_CTRL_PERIOD_S 60
 

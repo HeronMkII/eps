@@ -7,18 +7,18 @@
 void default_values_test(void) {
     ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_1_DEF_SHADOW_SETPOINT), 25.0);
     ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_2_DEF_SHADOW_SETPOINT), 25.0);
-    ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_1_DEF_SUN_SETPOINT), 19.977);
-    ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_2_DEF_SUN_SETPOINT), 19.977);
+    ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_1_DEF_SUN_SETPOINT), 19.985);
+    ASSERT_FP_EQ(dac_raw_data_to_heater_setpoint(HEATER_2_DEF_SUN_SETPOINT), 19.985);
 
     ASSERT_FP_EQ(adc_raw_to_circ_cur(
         HEATER_SUN_CUR_THRESH_UPPER, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF),
-        0.299);
+        1.0);
     ASSERT_FP_EQ(adc_raw_to_circ_cur(
         HEATER_SUN_CUR_THRESH_LOWER, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF),
-        0.099);
+        0.949);
 
     // To test possible raw values
-    
+
     // print("0x%x\n", heater_setpoint_to_dac_raw_data(20));
     // print("0x%x\n", heater_setpoint_to_dac_raw_data(25));
 
