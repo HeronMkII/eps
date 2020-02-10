@@ -12,11 +12,11 @@
 
 // Current sense resistor values (in ohms)
 #define ADC_DEF_CUR_SENSE_RES   0.008
-#define ADC_BAT_CUR_SENSE_RES   0.002
+#define ADC_BAT_CUR_SENSE_RES   0.008
 
 // Voltage references for INA214's (in V)
 #define ADC_DEF_CUR_SENSE_VREF  0.0
-#define ADC_BAT_CUR_SENSE_VREF  2.5
+#define ADC_BAT_CUR_SENSE_VREF  0.0
 
 // Voltage divider resistor values (in ohms)
 // Applies to 5V, PACK, 3V3

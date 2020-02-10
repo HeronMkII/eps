@@ -21,7 +21,7 @@
 #define HEATER_2_DEF_SUN_SETPOINT       0x39F   // 20 C
 
 // Default current thresholds (raw 12-bit ADC values)
-// TODO
+// TODO change to 1A
 #define HEATER_SUN_CUR_THRESH_UPPER     0x0C4   // 0.3 A
 #define HEATER_SUN_CUR_THRESH_LOWER     0x041   // 0.1 A
 
