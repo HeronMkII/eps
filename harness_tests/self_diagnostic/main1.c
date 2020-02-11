@@ -148,10 +148,10 @@ void read_current_test(void) {
 
     /* CAN_EPS_HK_PAY_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CUR, 0x00);
-    current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.2);
-    ASSERT_FP_LESS(current, 0.3);
+    current = adc_raw_to_efuse_cur(raw_data, ADC_EFUSE_CUR_SENSE_RES);
+    /* Assert current is within range, heaters should be off by default */
+    ASSERT_FP_GREATER(current, 0.1);
+    ASSERT_FP_LESS(current, 0.2);
 }
 
 /* Verifies that all temperatures are within valid range */
@@ -218,7 +218,7 @@ void heater_test(void) {
     control_heater_mode();
 
     /* Check current due to heater 1 on */
-    _delay_ms(1000);
+    _delay_ms(2000);
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
     double heater_on_curr_pack = adc_raw_to_circ_cur(raw_data,
         ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
@@ -246,8 +246,7 @@ void heater_test(void) {
     control_heater_mode();
 
     /* Check current due to heater 2 on */
-    _delay_ms(1000);
-
+    _delay_ms(2000);
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_BAT_CUR, 0x00);
     heater_on_curr_pack = adc_raw_to_circ_cur(raw_data,
         ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);

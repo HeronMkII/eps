@@ -23,8 +23,9 @@
 #define ADC_VOL_SENSE_LOW_RES   10000
 #define ADC_VOL_SENSE_HIGH_RES  10000
 
-// PAY current measurement uses the IMON pin from the current limiter IC, not a
+// PAY current measurement uses the IMON pin from the current limiter IC with a
 // current sense resistor
+#define ADC_EFUSE_CUR_SENSE_RES 511
 
 // DAC CS
 #define DAC_CS_PIN  PB4
