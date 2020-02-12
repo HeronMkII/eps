@@ -54,6 +54,7 @@ test_t t2 = { .name = "OBC Reset Test", .fn = obc_reset_test };
 test_t* suite[] = { &t1, &t2};
 
 int main(void) {
+    WDT_OFF();
     init_eps();
     init_hb(HB_EPS);
     run_tests(suite, sizeof(suite) / sizeof(suite[0]));

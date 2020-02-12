@@ -102,7 +102,7 @@ void read_current_test(void) {
     double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.1);
-    ASSERT_FP_LESS(current, 0.2);
+    ASSERT_FP_LESS(current, 0.5);
 
     /* CAN_EPS_HK_X_POS_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_X_POS_CUR, 0x00);
@@ -136,7 +136,7 @@ void read_current_test(void) {
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_3V3_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.10);
+    ASSERT_FP_GREATER(current, 0.05);
     ASSERT_FP_LESS(current, 0.15);
 
     /* CAN_EPS_HK_5V_CUR */
@@ -144,7 +144,7 @@ void read_current_test(void) {
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
     ASSERT_FP_GREATER(current, 0.025);
-    ASSERT_FP_LESS(current, 0.1);
+    ASSERT_FP_LESS(current, 0.3);
 
     /* CAN_EPS_HK_PAY_CUR */
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_PAY_CUR, 0x00);
@@ -195,10 +195,10 @@ void read_temp_test(void) {
     converter current should increase by 0.12-0.16 and 0.24-0.32A as above. */
 void heater_test(void) {
     /* Turn heaters off */
-    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0);
+    set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0);
+    set_raw_heater_setpoint(&heater_2_sun_setpoint, 0);
     control_heater_mode();
 
     /* Initial values */
@@ -213,8 +213,8 @@ void heater_test(void) {
 
     /* Turn heater 1 on */
     _delay_ms(1000);
-    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0x7FF);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0x7FF);
     control_heater_mode();
 
     /* Check current due to heater 1 on */
@@ -241,8 +241,8 @@ void heater_test(void) {
     _delay_ms(1000);
 
     /* Turn heater 2 on */
-    set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_2_sun_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_2_shadow_setpoint, 0x7FF);
+    set_raw_heater_setpoint(&heater_2_sun_setpoint, 0x7FF);
     control_heater_mode();
 
     /* Check current due to heater 2 on */
@@ -263,8 +263,8 @@ void heater_test(void) {
 
     /* Turn heater 1 on */
     _delay_ms(1000);
-    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0xFFF);
-    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0xFFF);
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, 0x7FF);
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, 0x7FF);
     control_heater_mode();
 
     // Check current due to both heaters on
@@ -298,7 +298,7 @@ void imu_test(void) {
     double gyr_data = 0;
     uint8_t not_zero_flag = 0;
 
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_X, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -311,7 +311,7 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 
     not_zero_flag = 0;
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_Y, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -324,7 +324,7 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 
     not_zero_flag = 0;
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_UNCAL_Z, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -338,7 +338,7 @@ void imu_test(void) {
 
 
     not_zero_flag = 0;
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_X, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -350,7 +350,7 @@ void imu_test(void) {
     }
     ASSERT_TRUE(not_zero_flag);
 
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_Y, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -362,7 +362,7 @@ void imu_test(void) {
     }
     ASSERT_TRUE(not_zero_flag);
 
-    for (int i=0; i<3; i++){
+    for (int i=0; i<5; i++){
         raw_data_imu = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_GYR_CAL_Z, 0x00);
         gyr_data = imu_raw_data_to_gyro(raw_data_imu);
         ASSERT_FP_GREATER(gyr_data, -0.1);
@@ -378,9 +378,9 @@ void imu_test(void) {
 /* Sets current thresholds and asserts that heater has correct operational mode */
 void heater_setpoint_test(void){
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
-        adc_circ_cur_to_raw(2, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+        adc_circ_cur_to_raw(1, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
-        adc_circ_cur_to_raw(2.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+        adc_circ_cur_to_raw(1.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
 
@@ -408,12 +408,6 @@ void restart_test(void){
     ASSERT_EQ(restart_reason, 0x06);
 }
 
-/* Returns current from solar panels for shunts test */
-double get_shunts_data(uint8_t current_source){
-    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, current_source, 0x00);
-    double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
-    return current;
-}
 
 test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
 test_t t2 = {.name = "read current", .fn = read_current_test};
@@ -427,6 +421,7 @@ test_t t8 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
 test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8};
 
 int main(void) {
+    WDT_OFF();
     init_eps();
     /* Runs all tests in sequential order */
     run_tests(suite, sizeof(suite) / sizeof(suite[0]));
