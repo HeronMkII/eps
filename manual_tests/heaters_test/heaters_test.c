@@ -10,7 +10,6 @@ Also display thermistor measurements.
 
 #include "../../src/devices.h"
 #include "../../src/heaters.h"
-#include "../../src/measurements.h"
 
 
 // Callback function signature to run a command
@@ -70,12 +69,14 @@ const uint8_t all_cmds_len = sizeof(all_cmds) / sizeof(all_cmds[0]);
 
 
 void set_heater_1(double temp) {
-    set_heater_1_raw_shadow_setpoint(heater_setpoint_temp_to_raw(temp));
+    set_raw_heater_setpoint(&heater_1_shadow_setpoint, heater_setpoint_to_dac_raw_data(temp));
+    set_raw_heater_setpoint(&heater_1_sun_setpoint, heater_setpoint_to_dac_raw_data(temp));
     print("Set heater 1 setpoint (DAC A) = %.1f C\n", temp);
 }
 
 void set_heater_2(double temp) {
-    set_heater_2_raw_shadow_setpoint(heater_setpoint_temp_to_raw(temp));
+    set_raw_heater_setpoint(&heater_2_shadow_setpoint, heater_setpoint_to_dac_raw_data(temp));
+    set_raw_heater_setpoint(&heater_2_sun_setpoint, heater_setpoint_to_dac_raw_data(temp));
     print("Set heater 2 setpoint (DAC B) = %.1f C\n", temp);
 }
 
@@ -87,7 +88,11 @@ void read_voltage(uint8_t channel) {
     print(", %.6f", voltage);
 }
 
-// read_adc_current function definition now in heaters.c and returns the current value
+double read_eps_cur(uint8_t channel) {
+    uint16_t raw = fetch_and_read_adc_channel(&adc, channel);
+    return adc_raw_to_circ_cur(raw, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
+}
+
 void read_current(uint8_t channel) {			
     double current = read_eps_cur(channel);
     print(", %.6f", current);		
@@ -107,26 +112,26 @@ void read_setpoint(uint16_t raw_voltage) {
 
 void read_data_fn(void) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        read_voltage(MEAS_BB_VOUT);
-        read_current(MEAS_BB_IOUT);
-        read_current(MEAS_NEG_Y_IOUT);
-        read_current(MEAS_POS_X_IOUT);
-        read_current(MEAS_POS_Y_IOUT);
-        read_current(MEAS_NEG_X_IOUT);
-        read_therm(MEAS_THERM_1);
-        read_therm(MEAS_THERM_2);
-        read_voltage(MEAS_PACK_VOUT);
+        read_voltage(ADC_VMON_3V3);
+        read_current(ADC_IMON_3V3);
+        read_current(ADC_IMON_Y_MINUS);
+        read_current(ADC_IMON_X_PLUS);
+        read_current(ADC_IMON_Y_PLUS);
+        read_current(ADC_IMON_X_MINUS);
+        read_therm(ADC_THM_BATT1);
+        read_therm(ADC_THM_BATT2);
+        read_voltage(ADC_VMON_PACK);
 
         // Battery current (bipolar operation)
-        uint8_t channel = MEAS_PACK_IOUT;
+        uint8_t channel = ADC_IMON_PACK;
         fetch_adc_channel(&adc, channel);
         uint16_t raw_data = read_adc_channel(&adc, channel);
         double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
 
         print(", %.6f", current);
 
-        read_current(MEAS_BT_IOUT);
-        read_voltage(MEAS_BT_VOUT);
+        read_current(ADC_IMON_5V);
+        read_voltage(ADC_VMON_5V);
         read_setpoint(dac.raw_voltage_a);
         read_setpoint(dac.raw_voltage_b);
         print("\n");
