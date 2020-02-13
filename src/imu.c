@@ -245,6 +245,7 @@ Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
     // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
+    // TODO - check this timeout and IMU_PACKET_CHECK_COUNT
     uint8_t timeout = UINT8_MAX;
     while (get_imu_int() != 0 && timeout > 0) {
         _delay_ms(1);
