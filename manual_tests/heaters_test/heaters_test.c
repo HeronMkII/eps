@@ -112,28 +112,25 @@ void read_setpoint(uint16_t raw_voltage) {
 
 void read_data_fn(void) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        read_voltage(ADC_VMON_3V3);
-        read_current(ADC_IMON_3V3);
+        read_setpoint(dac.raw_voltage_a);
+        read_setpoint(dac.raw_voltage_b);
+        read_therm(ADC_THM_BATT1);
+        read_therm(ADC_THM_BATT2);
+        read_current(ADC_IMON_PACK);
+        read_current(ADC_IMON_5V);
+        read_therm(ADC_THM_PAY_CONN);
+        read_therm(ADC_THM_3V3_TOP);
+        read_therm(ADC_THM_5V_TOP);
         read_current(ADC_IMON_Y_MINUS);
         read_current(ADC_IMON_X_PLUS);
         read_current(ADC_IMON_Y_PLUS);
         read_current(ADC_IMON_X_MINUS);
-        read_therm(ADC_THM_BATT1);
-        read_therm(ADC_THM_BATT2);
+        read_current(ADC_IMON_3V3);
         read_voltage(ADC_VMON_PACK);
-
-        // Battery current (bipolar operation)
-        uint8_t channel = ADC_IMON_PACK;
-        fetch_adc_channel(&adc, channel);
-        uint16_t raw_data = read_adc_channel(&adc, channel);
-        double current = adc_raw_to_circ_cur(raw_data, ADC_BAT_CUR_SENSE_RES, ADC_BAT_CUR_SENSE_VREF);
-
-        print(", %.6f", current);
-
-        read_current(ADC_IMON_5V);
+        read_voltage(ADC_VMON_3V3);
         read_voltage(ADC_VMON_5V);
-        read_setpoint(dac.raw_voltage_a);
-        read_setpoint(dac.raw_voltage_b);
+        read_current(ADC_IMON_PAY_LIM);
+        
         print("\n");
     }
 }
@@ -269,9 +266,11 @@ int main(void) {
     print_cmds();
     set_uart_rx_cb(uart_cb);
 
-    print(", BB Vol (V), BB Cur (A), -Y Cur (A), +X Cur (A), +Y Cur (A)");
-    print(", -X Cur (A), Temp 1 (C), Temp 2 (C), Bat Vol (V), Bat Cur (A)");
-    print(", BT Cur (A), BT Vol (V), Setpoint 1 (C), Setpoint 2 (C)");
+    print(", Setpoint 1 (C), Setpoint 2 (C), Temp 1 (C), Temp 2 (C)");
+    print(", Bat Cur (A), 5V Cur (A), PAY Con Temp (C), 3V3 Temp (C), 5V Temp (C)");
+    print(", -Y Cur (A), +X Cur (A), +Y Cur (A), -X Cur (A)");
+    print(", 3V3 Cur (A), Bat Vol (V), 3V3 Vol (V)");
+    print(", 5V Vol (V), PAY Vol (V)");
     print("\n");
 
     while (1) {
