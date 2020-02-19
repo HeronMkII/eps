@@ -298,7 +298,7 @@ void heater_setpoint_test(void){
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
         adc_circ_cur_to_raw(0.0, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
-        adc_circ_cur_to_raw(0.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+        adc_circ_cur_to_raw(0.01, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
 
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
