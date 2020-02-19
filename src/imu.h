@@ -42,7 +42,7 @@
 #define IMU_DEF_REPORT_INTERVAL 0x0000EA60
 
 // Number of packets to receive for checking a response from the IMU
-#define IMU_PACKET_CHECK_COUNT 20
+#define IMU_PACKET_CHECK_COUNT 10
 
 
 extern uint8_t imu_seq_nums[];

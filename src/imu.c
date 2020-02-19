@@ -244,9 +244,8 @@ Waits until the interrupt pin goes low.
 Returns - 1 for success (got INT), 0 for failure (no INT)
 */
 uint8_t wait_for_imu_int(void) {
-    // Wait up to 255ms (can take up to 104ms after hardware reset, see reference library)
-    // TODO - check this timeout and IMU_PACKET_CHECK_COUNT
-    uint8_t timeout = UINT8_MAX;
+    // Wait up to 120ms (can take up to 104ms after hardware reset, see reference library)
+    uint8_t timeout = 120;
     while (get_imu_int() != 0 && timeout > 0) {
         _delay_ms(1);
         timeout--;
