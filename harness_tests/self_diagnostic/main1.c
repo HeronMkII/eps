@@ -29,10 +29,10 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
 
     rx_msg[0] = op_code;
     rx_msg[1] = field_num;
-    tx_msg[4] = (tx_data >> 24) & 0xFF;
-    tx_msg[5] = (tx_data >> 16) & 0xFF;
-    tx_msg[6] = (tx_data >> 8) & 0xFF;
-    tx_msg[7] = tx_data & 0xFF;
+    rx_msg[4] = (tx_data >> 24) & 0xFF;
+    rx_msg[5] = (tx_data >> 16) & 0xFF;
+    rx_msg[6] = (tx_data >> 8) & 0xFF;
+    rx_msg[7] = tx_data & 0xFF;
 
     enqueue(&can_rx_msg_queue, rx_msg);
     rx_q_size = queue_size(&can_rx_msg_queue);
@@ -58,13 +58,6 @@ uint32_t construct_rx_msg(uint8_t op_code, uint8_t field_num, uint32_t tx_data){
     
     uint32_t r_data = (uint32_t)tx_msg[4] << 24 | (uint32_t)tx_msg[5] << 16 | (uint32_t)tx_msg[6] << 8 | (uint32_t)tx_msg[7];
     return r_data;
-}
-
-/* Helper function for measuring heater currents */
-double measure_heater_current(uint8_t source){
-    uint32_t raw_data = construct_rx_msg(CAN_EPS_HK, source, 0x00);
-    double current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
-    return current;
 }
 
 /* Verifies that battery voltages are within valid range */
@@ -143,7 +136,7 @@ void read_current_test(void) {
     raw_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_5V_CUR, 0x00);
     current = adc_raw_to_circ_cur(raw_data, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF);
     /* Assert current is within range */
-    ASSERT_FP_GREATER(current, 0.025);
+    ASSERT_FP_GREATER(current, 0.01);
     ASSERT_FP_LESS(current, 0.3);
 
     /* CAN_EPS_HK_PAY_CUR */
@@ -292,6 +285,25 @@ void heater_test(void) {
     control_heater_mode();
 }
 
+/* Sets current thresholds and asserts that heater has correct operational mode */
+void heater_setpoint_test(void){
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
+        adc_circ_cur_to_raw(1, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
+        adc_circ_cur_to_raw(1.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+
+    control_heater_mode();
+    ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
+
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
+        adc_circ_cur_to_raw(0.0, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
+        adc_circ_cur_to_raw(0.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+
+    control_heater_mode();
+    ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
+}
+
 /* Tests calibrated and uncalibrated gyroscope values */
 void imu_test(void) {
     uint32_t raw_data_imu = 0;
@@ -375,21 +387,6 @@ void imu_test(void) {
     ASSERT_TRUE(not_zero_flag);
 }
 
-/* Sets current thresholds and asserts that heater has correct operational mode */
-void heater_setpoint_test(void){
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
-        adc_circ_cur_to_raw(1, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
-        adc_circ_cur_to_raw(1.05, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
-    control_heater_mode();
-    ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
-
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER, 0);
-    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER, 0.05);
-    control_heater_mode();
-    ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
-}
-
 /* Asserts that the uptime value sent is within valid range */
 void uptime_test(void){
     construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
@@ -413,10 +410,10 @@ test_t t1 = {.name = "read voltage", .fn = read_voltage_test};
 test_t t2 = {.name = "read current", .fn = read_current_test};
 test_t t3 = {.name = "read temp", .fn = read_temp_test};
 test_t t4 = {.name = "heater test", .fn = heater_test};
-test_t t5 = {.name = "imu test", .fn = imu_test};
-test_t t6 = {.name = "uptime test", .fn = uptime_test};
-test_t t7 = {.name = "restart test", .fn = restart_test};
-test_t t8 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
+test_t t5 = {.name = "heater setpoint test", .fn = heater_setpoint_test};
+test_t t6 = {.name = "imu test", .fn = imu_test};
+test_t t7 = {.name = "uptime test", .fn = uptime_test};
+test_t t8 = {.name = "restart test", .fn = restart_test};
 
 test_t* suite[] = {&t1, &t2, &t3, &t4, &t5, &t6, &t7, &t8};
 
