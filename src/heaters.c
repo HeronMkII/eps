@@ -1,6 +1,6 @@
 /*
-Comparator functionality for heaters. Requires thermistors and heaters/ammeter
-attached to EPS board. This is very similar to the version on PAY.
+Comparator functionality for heaters. Requires thermistors and heaters
+attached to EPS board.
 
 Author: Brytni Richards, Bruno Almeida
 
@@ -21,28 +21,28 @@ Shadow is the default setpoint mode, sun is the secondary mode.
 #include "heaters.h"
 
 heater_val_t heater_1_shadow_setpoint = {
-    .raw = 0,
+    .raw = HEATER_1_DEF_SHADOW_SETPOINT,
     .eeprom_addr = HEATER_1_SHADOW_SETPOINT_ADDR
 };
 heater_val_t heater_2_shadow_setpoint = {
-    .raw = 0,
+    .raw = HEATER_2_DEF_SHADOW_SETPOINT,
     .eeprom_addr = HEATER_2_SHADOW_SETPOINT_ADDR
 };
 heater_val_t heater_1_sun_setpoint = {
-    .raw = 0,
+    .raw = HEATER_1_DEF_SUN_SETPOINT,
     .eeprom_addr = HEATER_1_SUN_SETPOINT_ADDR
 };
 heater_val_t heater_2_sun_setpoint = {
-    .raw = 0,
+    .raw = HEATER_2_DEF_SUN_SETPOINT,
     .eeprom_addr = HEATER_2_SUN_SETPOINT_ADDR
 };
 
 heater_val_t heater_sun_cur_thresh_upper = {
-    .raw = 0,
+    .raw = HEATER_SUN_CUR_THRESH_UPPER,
     .eeprom_addr = HEATER_CUR_THRESH_UPPER_ADDR
 };
 heater_val_t heater_sun_cur_thresh_lower = {
-    .raw = 0,
+    .raw = HEATER_SUN_CUR_THRESH_LOWER,
     .eeprom_addr = HEATER_CUR_THRESH_LOWER_ADDR
 };
 
@@ -57,16 +57,16 @@ void init_heaters(void) {
     // Read setpoints
     heater_1_shadow_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_1_shadow_setpoint.eeprom_addr,
-        heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SHADOW_SETPOINT));
+        HEATER_1_DEF_SHADOW_SETPOINT);
     heater_2_shadow_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_2_shadow_setpoint.eeprom_addr,
-        heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SHADOW_SETPOINT));
+        HEATER_2_DEF_SHADOW_SETPOINT);
     heater_1_sun_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_1_sun_setpoint.eeprom_addr,
-        heater_setpoint_to_dac_raw_data(HEATER_1_DEF_SUN_SETPOINT));
+        HEATER_1_DEF_SUN_SETPOINT);
     heater_2_sun_setpoint.raw = (uint16_t) read_eeprom_or_default(
         heater_2_sun_setpoint.eeprom_addr,
-        heater_setpoint_to_dac_raw_data(HEATER_2_DEF_SUN_SETPOINT));
+        HEATER_2_DEF_SUN_SETPOINT);
 
     // Don't need to call set_raw_heater_setpoint() to save to EEPROM because
     // when it restarts, it will use the default values again
@@ -74,12 +74,10 @@ void init_heaters(void) {
     // Read current thresholds
     heater_sun_cur_thresh_upper.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_upper.eeprom_addr,
-        adc_circ_cur_to_raw(HEATER_SUN_CUR_THRESH_UPPER,
-        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+        HEATER_SUN_CUR_THRESH_UPPER);
     heater_sun_cur_thresh_lower.raw = (uint16_t) read_eeprom_or_default(
         heater_sun_cur_thresh_lower.eeprom_addr,
-        adc_circ_cur_to_raw(HEATER_SUN_CUR_THRESH_LOWER,
-        ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
+        HEATER_SUN_CUR_THRESH_LOWER);
 
     update_heater_setpoint_outputs();
 }
