@@ -287,6 +287,18 @@ void heater_test(void) {
 
 /* Sets current thresholds and asserts that heater has correct operational mode */
 void heater_setpoint_test(void){
+    // If we erased EEPROM before running the test, these setpoints should
+    // already be set
+    // Just in case, set them now anyways
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT1_SHAD_SP,
+        HEATER_1_DEF_SHADOW_SETPOINT);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT2_SHAD_SP,
+        HEATER_2_DEF_SHADOW_SETPOINT);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT1_SUN_SP,
+        HEATER_1_DEF_SUN_SETPOINT);
+    construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT2_SUN_SP,
+        HEATER_2_DEF_SUN_SETPOINT);
+
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
         adc_circ_cur_to_raw(1, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_UPPER,
@@ -294,6 +306,8 @@ void heater_setpoint_test(void){
 
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SHADOW);
+    ASSERT_EQ(dac.raw_voltage_a, HEATER_1_DEF_SHADOW_SETPOINT);
+    ASSERT_EQ(dac.raw_voltage_b, HEATER_2_DEF_SHADOW_SETPOINT);
 
     construct_rx_msg(CAN_EPS_CTRL, CAN_EPS_CTRL_SET_HEAT_CUR_THR_LOWER,
         adc_circ_cur_to_raw(0.0, ADC_DEF_CUR_SENSE_RES, ADC_DEF_CUR_SENSE_VREF));
@@ -302,6 +316,8 @@ void heater_setpoint_test(void){
 
     control_heater_mode();
     ASSERT_EQ(heater_mode, HEATER_MODE_SUN);
+    ASSERT_EQ(dac.raw_voltage_a, HEATER_1_DEF_SUN_SETPOINT);
+    ASSERT_EQ(dac.raw_voltage_b, HEATER_2_DEF_SUN_SETPOINT);
 }
 
 /* Tests calibrated and uncalibrated gyroscope values */
