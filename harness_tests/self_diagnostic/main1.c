@@ -181,6 +181,19 @@ void read_temp_test(void) {
     temp = adc_raw_to_therm_temp(raw_data_temp);
     ASSERT_FP_GREATER(temp, 20.0);
     ASSERT_FP_LESS(temp, 30.0);
+
+    uint32_t raw_data_sp = 0;
+    double sp = 0;
+
+    /* Heater 1 setpoint */
+    raw_data_sp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_HEAT1_SP, 0x00);
+    sp = dac_raw_data_to_heater_setpoint(raw_data_sp);
+    ASSERT_FP_EQ(sp, 25.0);
+
+    /* Heater 2 setpoint */
+    raw_data_sp = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_HEAT2_SP, 0x00);
+    sp = dac_raw_data_to_heater_setpoint(raw_data_sp);
+    ASSERT_FP_EQ(sp, 25.0);
 }
 
 /* Verifies that battery pack current increases by between 0.15A and 0.2A for each heater
@@ -405,20 +418,18 @@ void imu_test(void) {
 
 /* Asserts that the uptime value sent is within valid range */
 void uptime_test(void){
-    construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
-    uint32_t tx_data = uptime_s;
-    ASSERT_FP_GREATER(tx_data, 1); /* 1 second */
-    ASSERT_FP_LESS(tx_data, 60); /* 60 seconds */
+    uint32_t tx_data = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_UPTIME, 0x00);
+    ASSERT_GREATER(tx_data, 1); /* 1 second */
+    ASSERT_LESS(tx_data, 60); /* 60 seconds */
 }
 
 /* Asserts that the restart count value sent is within valid range */
 void restart_test(void){
     uint32_t restart_count = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_COUNT, 0x00);
-    ASSERT_FP_GREATER(restart_count, 1);
-    ASSERT_FP_LESS(restart_count, 1000);
+    ASSERT_EQ(restart_count, 1);
 
     uint32_t restart_reason = construct_rx_msg(CAN_EPS_HK, CAN_EPS_HK_RESTART_REASON, 0x00);
-    ASSERT_EQ(restart_reason, 0x06);
+    ASSERT_EQ(restart_reason, UPTIME_RESTART_REASON_EXTRF);
 }
 
 
